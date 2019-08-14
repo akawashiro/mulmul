@@ -1,0 +1,11 @@
+[package]
+name = "mulmul"
+version = "0.1.0"
+authors = ["Akira Kawata <akirakawata1@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+combine = "2.2.2"
+combine-language = "2.0.0"
