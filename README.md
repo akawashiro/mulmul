@@ -1,6 +1,14 @@
 # mulmul
 A multistage programming language
 
+## Tokenizer
+
+Separators are
+- `+`, `*`, `-`, `/`
+- spaces
+- `(*`, `*)`
+- `(`, `)`
+
 ## Grammar
 
 ```
