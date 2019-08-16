@@ -93,11 +93,15 @@ fn parse_variable_expr(lexer: &mut Lexer) -> Result<Expr, String> {
 }
 
 fn parse_factor(lexer: &mut Lexer) -> Result<Expr, String> {
-    combine_or(boxfn!(parse_variable_expr), combine_or(boxfn!(parse_number), boxfn!(parse_paren_expr)))(lexer)
+    if lexer.is_end() {
+        Err("parse_factor failed.".to_string())
+    } else {
+        combine_or(boxfn!(parse_variable_expr), combine_or(boxfn!(parse_number), boxfn!(parse_paren_expr)))(lexer)
+    }
 }
 
 fn parse_term(lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_factor(lexer) {
+    match parse_app(lexer) {
         Ok(head) => {
             let mut ret = head;
             loop {
@@ -107,7 +111,7 @@ fn parse_term(lexer: &mut Lexer) -> Result<Expr, String> {
                 let o = lexer.peek();
                 if o == "*" {
                     lexer.getone();
-                    match parse_factor(lexer) {
+                    match parse_app(lexer) {
                         Ok(e) => {
                             ret = Expr::Times(Box::new(ret), Box::new(e))
                         },
@@ -115,7 +119,7 @@ fn parse_term(lexer: &mut Lexer) -> Result<Expr, String> {
                     }
                 } else if o == "/" {
                     lexer.getone();
-                    match parse_factor(lexer) {
+                    match parse_app(lexer) {
                         Ok(e) => {
                             ret = Expr::Divides(Box::new(ret), Box::new(e))
                         },
@@ -164,7 +168,7 @@ fn parse_numerical_expr(lexer: &mut Lexer) -> Result<Expr, String> {
     }
 }
 
-fn parse_string(s: String) -> Box<Fn(&mut Lexer) -> Result<String, String>>{
+fn parse_string(s: String) -> Box<dyn Fn(&mut Lexer) -> Result<String, String>>{
     Box::new(move |lexer: &mut Lexer| -> Result<String, String>{
         let t = lexer.peek();
         if s == t {
@@ -178,7 +182,7 @@ fn parse_string(s: String) -> Box<Fn(&mut Lexer) -> Result<String, String>>{
 
 fn parse_epsilon(lexer: &mut Lexer) -> Result<Expr, String> {
     match parse_string("epsilon".to_string())(lexer) {
-        Ok(s) => Ok(Expr::Epsilon),
+        Ok(_) => Ok(Expr::Epsilon),
         Err(_) => Err("parse_epsilon failed.".to_string())
     }
 }
@@ -277,7 +281,29 @@ fn parse_unquote (lexer: &mut Lexer) -> Result<Expr, String> {
     }
 }
 
-fn combine_or(p1: Box<Fn(&mut Lexer) -> Result<Expr, String>>, p2: Box<Fn(&mut Lexer) -> Result<Expr, String>>) -> Box<Fn(&mut Lexer) -> Result<Expr, String>> {
+fn parse_app(lexer: &mut Lexer) -> Result<Expr, String> {
+    match parse_factor(lexer) {
+        Ok(e1) => {
+            match parse_factor(lexer) {
+                Ok(e2) => {
+                    let mut ret = Expr::App(Box::new(e1), Box::new(e2));
+                    loop {
+                        match parse_factor(lexer) {
+                            Ok(e3) => {
+                                ret = Expr::App(Box::new(ret), Box::new(e3));
+                            },
+                            Err(_) => return Ok(ret)
+                        }
+                    }
+                },
+                Err(_) => Ok(e1) 
+            }
+        },
+        Err(_) => Err("parse_app function failed.".to_string())
+    }
+}
+
+fn combine_or(p1: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>, p2: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>) -> Box<dyn Fn(&mut Lexer) -> Result<Expr, String>> {
     Box::new(move |lexer: &mut Lexer| -> Result<Expr, String>{
         let r = p1(lexer);
         match r {
@@ -298,7 +324,7 @@ fn parse_expr(lexer: &mut Lexer) -> Result<Expr, String> {
 }
 
 fn main() {
-    let mut lexer = Lexer::new("x + 1123 * 345 / (34 - 123)".to_string());
+    let mut lexer = Lexer::new("x + 1123 * 345 * (99 + (fun x -> x) y)".to_string());
     let mut r = parse_expr(&mut lexer);
     println!("{:?}", r);
 

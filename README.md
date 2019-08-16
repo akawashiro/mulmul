@@ -19,15 +19,19 @@ expr ::= boolean
        | "epsilon"
        | "quote" variable expr
        | "unquote" variable expr
-       | expr expr
 
 boolean ::= "true" | "false"
 
 numeral_expr ::= numeral_expr "+" term
                | numeral_expr "-" term
+               | term
 
 term ::= term "*" factor
        | term "/" factor
+       | application
+
+application ::= application factor
+              | factor
 
 factor ::= number
          | variable
