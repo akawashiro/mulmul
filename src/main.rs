@@ -25,6 +25,21 @@ macro_rules! boxfn {
     ($x: expr) => { Box::new($x) }
 }
 
+fn combine_or (p1: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>, p2: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>) -> Box<dyn Fn(&mut Lexer) -> Result<Expr, String>> {
+    Box::new(move |lexer: &mut Lexer| -> Result<Expr, String>{
+        let r = p1(lexer);
+        match r {
+            Ok(e) => Ok(e),
+            Err(_) => p2(lexer)
+        }
+    })
+}
+
+macro_rules! or {
+    ($base:expr) => { $base };
+    ($head:expr, $($rest:expr),+) => { combine_or($head, or!($($rest),+)) };
+}
+
 fn parse_boolean(lexer: &mut Lexer) -> Result<Expr, String> {
     let t = lexer.peek();
     match &*t {
@@ -56,18 +71,14 @@ fn parse_paren_expr(lexer: &mut Lexer) -> Result<Expr, String> {
     match &*t {
         "(" => {
             lexer.getone();
-            match parse_expr(lexer) {
-                Ok(e) => {
-                    let t = lexer.peek();
-                    match &*t {
-                        ")" => {
-                            lexer.getone();
-                            Ok(e)
-                        },
-                        _ => Err("parse_paren_expr failed.".to_string())
-                    }
+            let e = parse_expr(lexer)?;
+            let t = lexer.peek();
+            match &*t {
+                ")" => {
+                    lexer.getone();
+                    Ok(e)
                 },
-                Err(_) => Err("parse_paren_expr failed.".to_string())
+                _ => Err("parse_paren_expr failed.".to_string())
             }
         },
         _ => Err("parse_paren_expr failed.".to_string())
@@ -86,85 +97,59 @@ fn parse_variable(lexer: &mut Lexer) -> Result<Variable, String> {
 }
 
 fn parse_variable_expr(lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_variable(lexer) {
-        Ok(v) => Ok(Expr::Variable(v)),
-        Err(_) => Err("parse_variable_expr failed.".to_string())
-    }
+    let v = parse_variable(lexer)?;
+        Ok(Expr::Variable(v))
 }
 
 fn parse_factor(lexer: &mut Lexer) -> Result<Expr, String> {
     if lexer.is_end() {
         Err("parse_factor failed.".to_string())
     } else {
-        combine_or(boxfn!(parse_variable_expr), combine_or(boxfn!(parse_number), boxfn!(parse_paren_expr)))(lexer)
+        or!(boxfn!(parse_variable_expr), boxfn!(parse_number), boxfn!(parse_paren_expr))(lexer)
     }
 }
 
 fn parse_term(lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_app(lexer) {
-        Ok(head) => {
-            let mut ret = head;
-            loop {
-                if lexer.is_end() {
-                    return Ok(ret)
-                }
-                let o = lexer.peek();
-                if o == "*" {
-                    lexer.getone();
-                    match parse_app(lexer) {
-                        Ok(e) => {
-                            ret = Expr::Times(Box::new(ret), Box::new(e))
-                        },
-                        Err(_) => return Err("parse_term function failed.".to_string())
-                    }
-                } else if o == "/" {
-                    lexer.getone();
-                    match parse_app(lexer) {
-                        Ok(e) => {
-                            ret = Expr::Divides(Box::new(ret), Box::new(e))
-                        },
-                        Err(_) => return Err("parse_term function failed.".to_string())
-                    }
-                } else {
-                    return Ok(ret)
-                }
-            }
-        },
-        Err(_) => Err("parse_term function failed.".to_string())
+    let head = parse_app(lexer)?;
+    let mut ret = head;
+    loop {
+        if lexer.is_end() {
+            return Ok(ret)
+        }
+        let o = lexer.peek();
+        if o == "*" {
+            lexer.getone();
+            let e = parse_app(lexer)?;
+            ret = Expr::Times(Box::new(ret), Box::new(e))
+        } else if o == "/" {
+            lexer.getone();
+            let e = parse_app(lexer)?;
+            ret = Expr::Divides(Box::new(ret), Box::new(e))
+        } else {
+            return Ok(ret)
+        }
     }
 }
 
 fn parse_numerical_expr(lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_term(lexer) {
-        Ok(head) => {
-            let mut ret = head;
-            loop {
-                if lexer.is_end() {
-                    return Ok(ret)
-                }
-                let o = lexer.peek();
-                if o == "+" {
-                    lexer.getone();
-                    match parse_term(lexer) {
-                        Ok(e) => {
-                            ret = Expr::Plus(Box::new(ret), Box::new(e))
-                        },
-                        Err(_) => return Err("parse_numerical_expr function failed.".to_string())
-                    }
-                } else if o == "-" {
-                    lexer.getone();
-                    match parse_term(lexer) {
-                        Ok(e) => {
-                            ret = Expr::Minus(Box::new(ret), Box::new(e))
-                        },
-                        Err(_) => return Err("parse_numerical_expr function failed.".to_string())
-                    }
-                } else {
-                    return Ok(ret)
-                }
-            }
-        },
-        Err(_) => Err("parse_numerical_expr function failed.".to_string())
+    let head = parse_term(lexer)?;
+    let mut ret = head;
+    loop {
+        if lexer.is_end() {
+            return Ok(ret)
+        }
+        let o = lexer.peek();
+        if o == "+" {
+            lexer.getone();
+            let e = parse_term(lexer)?;
+            ret = Expr::Plus(Box::new(ret), Box::new(e))
+        } else if o == "-" {
+            lexer.getone();
+            let e = parse_term(lexer)?;
+            ret = Expr::Minus(Box::new(ret), Box::new(e))
+        } else {
+            return Ok(ret)
+        }
     }
 }
 
@@ -181,146 +166,68 @@ fn parse_string(s: String) -> Box<dyn Fn(&mut Lexer) -> Result<String, String>>{
 }
 
 fn parse_epsilon(lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_string("epsilon".to_string())(lexer) {
-        Ok(_) => Ok(Expr::Epsilon),
-        Err(_) => Err("parse_epsilon failed.".to_string())
-    }
+    parse_string("epsilon".to_string())(lexer)?;
+    Ok(Expr::Epsilon)
 }
 
 fn parse_if (lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_string("if".to_string())(lexer) {
-        Ok(_) => {
-            match parse_expr(lexer) {
-                Ok(cond) => {
-                    match parse_string("then".to_string())(lexer) {
-                        Ok(_) => {
-                            match parse_expr(lexer) {
-                                Ok(e1) => {
-                                    match parse_string("else".to_string())(lexer) {
-                                        Ok(_) => {
-                                            match parse_expr(lexer) {
-                                                Ok(e2) => Ok(Expr::If(Box::new(cond), Box::new(e1), Box::new(e2))),
-                                                Err(_) => Err("parse_if failed.".to_string())
-                                            }
-                                        },
-                                        Err(_) => Err("parse_if failed.".to_string())
-                                    }
-                                },
-                                Err(_) => Err("parse_if failed.".to_string())
-                            }
-                        },
-                        Err(_) => Err("parse_if failed.".to_string())
-                    }
-                },
-                Err(_) => Err("parse_if failed.".to_string())
-            }
-        },
-    Err(_) => Err("parse_if failed.".to_string())
-    }
+    parse_string("if".to_string())(lexer)?;
+    let cond = parse_expr(lexer)?;
+    parse_string("then".to_string())(lexer)?;
+    let e1 = parse_expr(lexer)?;
+    parse_string("else".to_string())(lexer)?;
+    let e2 = parse_expr(lexer)?;
+    Ok(Expr::If(Box::new(cond), Box::new(e1), Box::new(e2)))
 }
 
 fn parse_fun (lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_string("fun".to_string())(lexer) {
-        Ok(_) => {
-            match parse_variable(lexer) {
-                Ok(var) => {
-                    match parse_string("->".to_string())(lexer) {
-                        Ok(_) => {
-                            match parse_expr(lexer) {
-                                Ok(e) => {
-                                    Ok(Expr::Fun(var, Box::new(e)))
-                               },
-                                Err(_) => Err("parse_fun failed.".to_string())
-                            }
-                        },
-                        Err(_) => Err("parse_fun failed.".to_string())
-                    }
-                },
-                Err(_) => Err("parse_fun failed.".to_string())
-            }
-        },
-    Err(_) => Err("parse_fun failed.".to_string())
-    }
+    parse_string("fun".to_string())(lexer)?;
+    let var = parse_variable(lexer)?;
+    parse_string("->".to_string())(lexer)?;
+    let e = parse_expr(lexer)?;
+    Ok(Expr::Fun(var, Box::new(e)))
 }
 
 fn parse_quote (lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_string("quote".to_string())(lexer) {
-        Ok(_) => {
-            match parse_variable(lexer) {
-                Ok(var) => {
-                    match parse_expr(lexer) {
-                        Ok(e) => {
-                            Ok(Expr::Quote(var, Box::new(e)))
-                        },
-                        Err(_) => Err("parse_quote failed.".to_string())
-                    }
-                },
-                Err(_) => Err("parse_quote failed.".to_string())
-            }
-        },
-        Err(_) => Err("parse_quote failed.".to_string())
-    }
+    parse_string("quote".to_string())(lexer)?;
+    let var = parse_variable(lexer)?;
+    let e = parse_expr(lexer)?;
+    Ok(Expr::Quote(var, Box::new(e)))
 }
 
 fn parse_unquote (lexer: &mut Lexer) -> Result<Expr, String> {
-    match parse_string("unquote".to_string())(lexer) {
-        Ok(_) => {
-            match parse_variable(lexer) {
-                Ok(var) => {
-                    match parse_expr(lexer) {
-                        Ok(e) => {
-                            Ok(Expr::UnQuote(var, Box::new(e)))
-                        },
-                        Err(_) => Err("parse_unquote failed.".to_string())
-                    }
-                },
-                Err(_) => Err("parse_unquote failed.".to_string())
-            }
-        },
-        Err(_) => Err("parse_unquote failed.".to_string())
-    }
+    parse_string("unquote".to_string())(lexer)?;
+    let var = parse_variable(lexer)?;
+    let e = parse_expr(lexer)?;
+    Ok(Expr::UnQuote(var, Box::new(e)))
 }
 
 fn parse_app(lexer: &mut Lexer) -> Result<Expr, String> {
+    let e1 = parse_factor(lexer)?;
     match parse_factor(lexer) {
-        Ok(e1) => {
-            match parse_factor(lexer) {
-                Ok(e2) => {
-                    let mut ret = Expr::App(Box::new(e1), Box::new(e2));
-                    loop {
-                        match parse_factor(lexer) {
-                            Ok(e3) => {
-                                ret = Expr::App(Box::new(ret), Box::new(e3));
-                            },
-                            Err(_) => return Ok(ret)
-                        }
-                    }
-                },
-                Err(_) => Ok(e1) 
+        Ok(e2) => {
+            let mut ret = Expr::App(Box::new(e1), Box::new(e2));
+            loop {
+                match parse_factor(lexer) {
+                    Ok(e3) => {
+                        ret = Expr::App(Box::new(ret), Box::new(e3));
+                    },
+                    Err(_) => return Ok(ret)
+                }
             }
         },
-        Err(_) => Err("parse_app function failed.".to_string())
+        Err(_) => Ok(e1) 
     }
 }
 
-fn combine_or(p1: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>, p2: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>) -> Box<dyn Fn(&mut Lexer) -> Result<Expr, String>> {
-    Box::new(move |lexer: &mut Lexer| -> Result<Expr, String>{
-        let r = p1(lexer);
-        match r {
-            Ok(e) => Ok(e),
-            Err(_) => p2(lexer)
-        }
-    })
-}
-
 fn parse_expr(lexer: &mut Lexer) -> Result<Expr, String> {
-    combine_or(boxfn!(parse_quote), 
-               combine_or(boxfn!(parse_unquote),
-               combine_or(boxfn!(parse_fun),
-               combine_or(boxfn!(parse_if),
-               combine_or(boxfn!(parse_epsilon),
-               combine_or(boxfn!(parse_numerical_expr),
-               boxfn!(parse_boolean)))))))(lexer)
+    or!(boxfn!(parse_quote), 
+        boxfn!(parse_unquote),
+        boxfn!(parse_fun),
+        boxfn!(parse_if),
+        boxfn!(parse_epsilon),
+        boxfn!(parse_numerical_expr),
+        boxfn!(parse_boolean))(lexer)
 }
 
 fn main() {
