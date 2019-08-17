@@ -12,11 +12,9 @@ Separators are
 ## Grammar
 
 ```
-expr ::= boolean
-       | "if" expr "then" expr "else" expr
+expr ::= "if" expr "then" expr "else" expr
        | "fun" variable "->" expr
        | numeral_expr
-       | "epsilon"
        | "quote" variable expr
        | "unquote" variable expr
 
@@ -36,4 +34,6 @@ application ::= application factor
 factor ::= number
          | variable
          | "(" expr ")"
+         | "epsilon"
+         | boolean
 ```

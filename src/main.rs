@@ -105,7 +105,11 @@ fn parse_factor(lexer: &mut Lexer) -> Result<Expr, String> {
     if lexer.is_end() {
         Err("parse_factor failed.".to_string())
     } else {
-        or!(boxfn!(parse_variable_expr), boxfn!(parse_number), boxfn!(parse_paren_expr))(lexer)
+        or!(boxfn!(parse_variable_expr), 
+            boxfn!(parse_number), 
+            boxfn!(parse_paren_expr),
+            boxfn!(parse_epsilon),
+            boxfn!(parse_boolean))(lexer)
     }
 }
 
@@ -225,9 +229,7 @@ fn parse_expr(lexer: &mut Lexer) -> Result<Expr, String> {
         boxfn!(parse_unquote),
         boxfn!(parse_fun),
         boxfn!(parse_if),
-        boxfn!(parse_epsilon),
-        boxfn!(parse_numerical_expr),
-        boxfn!(parse_boolean))(lexer)
+        boxfn!(parse_numerical_expr))(lexer)
 }
 
 fn main() {
@@ -256,6 +258,10 @@ fn main() {
     println!("{:?}", r);
 
     lexer = Lexer::new("(unquote a (x + y + z)) + 1".to_string());
+    r = parse_expr(&mut lexer);
+    println!("{:?}", r);
+
+    lexer = Lexer::new("(fun a -> (quote a 1 + 2)) epsilon true".to_string());
     r = parse_expr(&mut lexer);
     println!("{:?}", r);
 }
