@@ -136,7 +136,11 @@ fn subst_expr(var: &Variable, arg: Expr, expr: Expr) -> Expr {
         },
         Expr::Quote(v, e) => {
             if v == *var {
-                Expr::Quote(v, e)
+                if arg == Expr::Epsilon {
+                    subst_expr(&v, Expr::Epsilon, *e)
+                } else {
+                    Expr::Quote(v.clone(), Box::new(subst_expr(&v, arg, *e)))
+                }
             } else {
                 Expr::Quote(v, Box::new(subst_expr(var, arg, *e)))
             }
@@ -158,10 +162,10 @@ fn test_with_input_string(vs: Vec<String>) {
         match r {
             Ok(e) => {
                 let mut e2 = e;
-                println!("{:?}", e2);
+                println!("{:?}", e2.show());
                 while !is_value(&e2) {
                     e2 = eval_one_step(e2);
-                    println!("{:?}", e2);
+                    println!("{:?}", e2.show());
                 }
             },
             Err(_) => ()
@@ -170,11 +174,18 @@ fn test_with_input_string(vs: Vec<String>) {
     }
 }
 
+fn is_stage(expr: Expr) -> bool {
+    match expr {
+        Expr::Epsilon => true,
+        _ => false
+    }
+}
+
 fn main() {
     let inputs = vec![
         String::from("1123 + 345"),
         String::from("1123 + 345 * 43 - 10"),
-        String::from("(fun x -> x + 10) 20"),
+        String::from("(fun x -> x + 10) ((fun a -> (quote a (20 + 1))) epsilon)"),
         // String::from("x + 1123 * 345 * (99 + (fun x -> x) y)"),
         // String::from("true"),
         // String::from("epsilon"),
