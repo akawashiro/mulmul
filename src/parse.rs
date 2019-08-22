@@ -73,7 +73,7 @@ fn parse_variable(lexer: &mut Lexer) -> Result<Variable, String> {
         Err("parse_variable failed".to_string())
     } else {
         lexer.getone();
-        Ok(Variable(Box::new(t)))
+        Ok(Variable {name: Box::new(t)})
     }
 }
 

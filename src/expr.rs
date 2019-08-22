@@ -1,5 +1,13 @@
 #[derive(Debug, Clone)]
-pub struct Variable(pub Box<String>);
+pub struct Variable {
+    pub name: Box<String>
+}
+
+impl PartialEq for Variable{
+    fn eq(&self, other: &Self) -> bool {
+        *self.name == *other.name
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum Expr {
