@@ -1,5 +1,4 @@
-# mulmul
-A multistage programming language
+# First Class Stage Interpreter
 
 ## Tokenizer
 
