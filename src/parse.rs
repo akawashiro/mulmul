@@ -55,7 +55,7 @@ fn parse_paren_expr(lexer: &mut Lexer) -> Result<Expr, String> {
     match &*t {
         "(" => {
             lexer.getone();
-            let e = parse_expr(lexer)?;
+            let e = parse_inside_tuple_expr(lexer)?;
             let t = lexer.peek();
             match &*t {
                 ")" => {
@@ -137,6 +137,28 @@ fn parse_numerical_expr(lexer: &mut Lexer) -> Result<Expr, String> {
             ret = Expr::Minus(Box::new(ret), Box::new(e))
         } else {
             return Ok(ret)
+        }
+    }
+}
+
+fn parse_inside_tuple_expr(lexer: &mut Lexer) -> Result<Expr, String> {
+    let head = parse_expr(lexer)?;
+    let mut es = vec![Box::new(head.clone())];
+    loop {
+        if lexer.is_end() {
+            return Ok(head)
+        }
+        let o = lexer.peek();
+        if o == "," {
+            lexer.getone();
+            let e = parse_expr(lexer)?;
+            es.push(Box::new(e))
+        } else {
+            if es.len() > 1 {
+                return Ok(Expr::Tuple(es))
+            } else {
+                return Ok(head)
+            }
         }
     }
 }

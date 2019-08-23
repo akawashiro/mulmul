@@ -30,7 +30,8 @@ pub enum Expr {
     If(Box<Expr>, Box<Expr>, Box<Expr>),
     Let(Variable, Box<Expr>, Box<Expr>),
     Quote(Variable, Box<Expr>),
-    UnQuote(Variable, Box<Expr>)
+    UnQuote(Variable, Box<Expr>),
+    Tuple(Vec<Box<Expr>>)
 }
 
 impl Expr {
@@ -57,6 +58,17 @@ impl Expr {
             Let(v, e1, e2) => format!("let {} = {} in {}",v.show(), e1.show(),e2.show()),
             Quote(v,e) => format!("(quote {} {})", v.show(), e.show()),
             UnQuote(v,e) => format!("(unquote {} {})", v.show(), e.show()),
+            Tuple(es) => {
+                let mut r = String::from("(");
+                for (i, e) in es.iter().enumerate() {
+                    if i == 0 {
+                        r = format!("{}{}", r, e.show())
+                    } else {
+                        r = format!("{},{}", r, e.show())
+                    }
+                }
+                format!("{})", r)
+            }
         }
     }
 }

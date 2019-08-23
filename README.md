@@ -33,7 +33,9 @@ application ::= application factor
 
 factor ::= number
          | variable
-         | "(" expr ")"
+         | "(" inside_tuple ")"
          | "epsilon"
          | boolean
+
+inside_tuple ::= expr "," inside_tuple
 ```

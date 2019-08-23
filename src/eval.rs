@@ -9,6 +9,14 @@ pub fn is_value(expr: &Expr) -> bool {
         Expr::Variable(_) => true,
         Expr::Fun(_,_) => true,
         Expr::Quote(_,_) => true,
+        Expr::Tuple(es) => {
+            for e in es {
+                if !is_value(e) {
+                    return false
+                }
+            }
+            true
+        }
         _ => false
     }
 }
@@ -122,6 +130,19 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                     }
                 }
             },
+            Expr::Tuple(es) => {
+                let mut f = false;
+                let mut es2 = Vec::new();
+                for e in es {
+                    if !f && !is_value(&e) {
+                        f = true;
+                        es2.push(Box::new(eval_one_step(*e)))
+                    } else {
+                        es2.push(Box::new(*e))
+                    }
+                }
+                Expr::Tuple(es2)
+            },
             Expr::Epsilon | Expr::Boolean(_) | Expr::Number(_) | Expr::Variable(_) | Expr::Fun(_,_) | Expr::Quote(_,_) => unreachable!(),
         }
     }
@@ -179,13 +200,16 @@ fn subst_expr(var: &Variable, arg: Expr, expr: Expr) -> Expr {
             } else {
                 Expr::UnQuote(v, Box::new(subst_expr(var, arg, *e)))
             }
-        }
+        },
         Expr::Let(v, e1, e2) => {
             if v ==  *var {
                 Expr::Let(v, e1, e2)
             } else {
                 Expr::Let(v, Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))
             }
+        },
+        Expr::Tuple(es) => {
+            Expr::Tuple(es.iter().map(|e| Box::new(subst_expr(var, arg.clone(), (**e).clone()))).collect())
         }
     }
 }

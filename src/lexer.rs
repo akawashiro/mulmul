@@ -4,29 +4,33 @@ fn tokenize(input_s: String) -> Vec<String> {
     let mut pos : usize = 0;
     let mut tok : String = String::new();
     // let ops = "+*/-()";
-    let ops = vec!["+","*","-","/","->","=","*)","(*","(",")"];
+    let ops = vec![",","+","*","-","/","->","=","*)","(*","(",")"];
     let maxl = (&ops).into_iter().map(|x| x.len()).max().unwrap();
     let spaces = " \n\t";
     loop {
         if pos >= input.len() {
             break
         }
-        for l in (1..maxl+1).rev() {
-            if pos + l < input.len() {
-                let mut op = String::from("");
-                for i in pos..pos+l {
-                    op.push(input[i])
-                }
-                if ops.contains(&&*op) {
-                    if "" != tok {
-                        ret.push(tok);
-                        tok = String::new();
-                    }	
-                    pos += l;
-                    ret.push(op);
-                    break
+        // Parse operators as many as possible
+        'outer: loop {
+            for l in (1..maxl+1).rev() {
+                if pos + l < input.len() {
+                    let mut op = String::from("");
+                    for i in pos..pos+l {
+                        op.push(input[i])
+                    }
+                    if ops.contains(&&*op) {
+                        if "" != tok {
+                            ret.push(tok);
+                            tok = String::new();
+                        }	
+                        pos += l;
+                        ret.push(op);
+                        continue 'outer
+                    }
                 }
             }
+            break
         }
         if spaces.contains(input[pos]) {
             if "" != tok {
