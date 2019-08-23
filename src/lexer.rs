@@ -11,13 +11,17 @@ fn tokenize(input_s: String) -> Vec<String> {
         if pos >= input.len() {
             break
         }
-        for l in (1..maxl).rev() {
+        for l in (1..maxl+1).rev() {
             if pos + l < input.len() {
                 let mut op = String::from("");
                 for i in pos..pos+l {
                     op.push(input[i])
                 }
                 if ops.contains(&&*op) {
+                    if "" != tok {
+                        ret.push(tok);
+                        tok = String::new();
+                    }	
                     pos += l;
                     ret.push(op);
                     break

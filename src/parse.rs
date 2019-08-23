@@ -32,7 +32,10 @@ fn parse_boolean(lexer: &mut Lexer) -> Result<Expr, String> {
             lexer.getone();
             Ok(Expr::Boolean(false))
         },
-        _ => Err("This token cannot interpret as a boolean.".to_string())
+        _ => {
+            let e = format!("This token {} cannot interpret as a boolean.", &*t);
+            Err(e.to_string())
+        }
     }
 }
 
