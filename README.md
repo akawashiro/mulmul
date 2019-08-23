@@ -14,11 +14,22 @@ Separators are
 expr ::= "if" expr "then" expr "else" expr
        | "fun" variable "->" expr
        | "let" variable = expr "in" expr
-       | numeral_expr
+       | boolean_expr
        | "quote" variable expr
        | "unquote" variable expr
 
 boolean ::= "true" | "false"
+
+boolean_expr ::= boolean_term_expr "&&" boolean_expr
+               | boolean_term_expr "||" boolean_expr
+               | boolean_term_expr
+
+boolean_term_expr ::= numeral_expr "<" numeral_expr
+                    | numeral_expr ">" numeral_expr
+                    | numeral_expr "<=" numeral_expr
+                    | numeral_expr ">=" numeral_expr
+                    | numeral_expr "==" numeral_expr
+                    | numeral_expr
 
 numeral_expr ::= numeral_expr "+" term
                | numeral_expr "-" term
