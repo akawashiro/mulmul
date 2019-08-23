@@ -99,8 +99,30 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                     }
                 }
             },
+            Expr::Let(v, e1, e2) => {
+                if !is_value(&*e1) {
+                    Expr::Let(v, Box::new(eval_one_step(*e1)), e2)
+                } else {
+                    subst_expr(&v, *e1, *e2)
+                }
+            },
+            Expr::UnQuote(v, e) => {
+                if !is_value(&*e) {
+                    Expr::UnQuote(v, Box::new(eval_one_step(*e)))
+                } else {
+                    match *e {
+                        Expr::Quote(v2, e2) => {
+                            if v == v2 {
+                                *e2
+                            } else {
+                                unreachable!()
+                            }
+                        },
+                        _ => unreachable!()
+                    }
+                }
+            },
             Expr::Epsilon | Expr::Boolean(_) | Expr::Number(_) | Expr::Variable(_) | Expr::Fun(_,_) | Expr::Quote(_,_) => unreachable!(),
-            _ => unreachable!()
         }
     }
 }
@@ -156,6 +178,13 @@ fn subst_expr(var: &Variable, arg: Expr, expr: Expr) -> Expr {
                 Expr::UnQuote(v, e)
             } else {
                 Expr::UnQuote(v, Box::new(subst_expr(var, arg, *e)))
+            }
+        }
+        Expr::Let(v, e1, e2) => {
+            if v ==  *var {
+                Expr::Let(v, e1, e2)
+            } else {
+                Expr::Let(v, Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))
             }
         }
     }

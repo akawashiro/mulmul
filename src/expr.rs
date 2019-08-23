@@ -28,6 +28,7 @@ pub enum Expr {
     Fun(Variable, Box<Expr>),
     App(Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
+    Let(Variable, Box<Expr>, Box<Expr>),
     Quote(Variable, Box<Expr>),
     UnQuote(Variable, Box<Expr>)
 }
@@ -53,6 +54,7 @@ impl Expr {
             Fun(v,e) => format!("(fun {} -> {})", v.show(), e.show()),
             App(e1, e2) => format!("({} {})",e1.show(),e2.show()),
             If(e1, e2, e3) => format!("if {} then {} else {}",e1.show(),e2.show(),e3.show()),
+            Let(v, e1, e2) => format!("let {} = {} in {}",v.show(), e1.show(),e2.show()),
             Quote(v,e) => format!("(quote {} {})", v.show(), e.show()),
             UnQuote(v,e) => format!("(unquote {} {})", v.show(), e.show()),
         }
@@ -73,6 +75,7 @@ impl PartialEq for Expr{
             (Fun(v1,e1), Fun(v2,e2)) if v1 == v2 && e1 == e2 => true,
             (App(e1,e2), App(e3,e4)) if e1 == e3 && e2 == e4 => true,
             (If(e1,e2,e3), If(e4,e5,e6)) if e1 == e4 && e2 == e5 && e3 == e6 => true,
+            (Let(e1,e2,e3), Let(e4,e5,e6)) if e1 == e4 && e2 == e5 && e3 == e6 => true,
             (Quote(v1,e1), Quote(v2,e2)) if v1 == v2 && e1 == e2 => true,
             (UnQuote(v1,e1), UnQuote(v2,e2)) if v1 == v2 && e1 == e2 => true,
             _ => false

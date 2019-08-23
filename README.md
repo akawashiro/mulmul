@@ -13,6 +13,7 @@ Separators are
 ```
 expr ::= "if" expr "then" expr "else" expr
        | "fun" variable "->" expr
+       | "let" variable = expr "in" expr
        | numeral_expr
        | "quote" variable expr
        | "unquote" variable expr

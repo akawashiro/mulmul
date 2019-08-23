@@ -67,7 +67,7 @@ fn parse_paren_expr(lexer: &mut Lexer) -> Result<Expr, String> {
 }
 
 fn parse_variable(lexer: &mut Lexer) -> Result<Variable, String> {
-    let keyword = vec!["if", "then", "else", "fun", "epsilon", "quote", "unquote", "true", "false"];
+    let keyword = vec!["if", "then", "else", "fun", "epsilon", "quote", "unquote", "true", "false", "let", "in"];
     let t = lexer.peek();
     if keyword.contains(&&*t) || ! t.chars().nth(0).unwrap().is_alphabetic() {
         Err("parse_variable failed".to_string())
@@ -173,6 +173,16 @@ fn parse_fun (lexer: &mut Lexer) -> Result<Expr, String> {
     Ok(Expr::Fun(var, Box::new(e)))
 }
 
+fn parse_let (lexer: &mut Lexer) -> Result<Expr, String> {
+    parse_string("let".to_string())(lexer)?;
+    let var = parse_variable(lexer)?;
+    parse_string("=".to_string())(lexer)?;
+    let e1 = parse_expr(lexer)?;
+    parse_string("in".to_string())(lexer)?;
+    let e2 = parse_expr(lexer)?;
+    Ok(Expr::Let(var, Box::new(e1), Box::new(e2)))
+}
+
 fn parse_quote (lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("quote".to_string())(lexer)?;
     let var = parse_variable(lexer)?;
@@ -209,6 +219,7 @@ pub fn parse_expr(lexer: &mut Lexer) -> Result<Expr, String> {
     or!(boxfn!(parse_quote), 
         boxfn!(parse_unquote),
         boxfn!(parse_fun),
+        boxfn!(parse_let),
         boxfn!(parse_if),
         boxfn!(parse_numerical_expr))(lexer)
 }

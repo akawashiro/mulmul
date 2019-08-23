@@ -45,7 +45,7 @@ fn repl() {
                     println!("{}", e2.show());
                 }
             },
-            Err(_) => ()
+            Err(e) => println!("{:?}", e)
         }
 
     }

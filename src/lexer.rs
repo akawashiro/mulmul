@@ -3,29 +3,28 @@ fn tokenize(input_s: String) -> Vec<String> {
     let mut ret = Vec::new();
     let mut pos : usize = 0;
     let mut tok : String = String::new();
-    let ops = "+*/-()";
+    // let ops = "+*/-()";
+    let ops = vec!["+","*","-","/","->","=","*)","(*","(",")"];
+    let maxl = (&ops).into_iter().map(|x| x.len()).max().unwrap();
     let spaces = " \n\t";
     loop {
         if pos >= input.len() {
             break
         }
-        if input[pos] == '(' && pos < input.len()-1 && input[pos+1] == '*' {
-            pos += 2;
-            ret.push("(*".to_string());
-        } else if input[pos] == '*' && pos < input.len()-1 && input[pos+1] == ')' {
-            pos += 2;
-            ret.push("*)".to_string());
-        } else if input[pos] == '-' && pos < input.len()-1 && input[pos+1] == '>' {
-            pos += 2;
-            ret.push("->".to_string());
-        } else if ops.contains(input[pos]) {
-            if "" != tok {
-                ret.push(tok);
-                tok = String::new();
-            }	
-            ret.push(input[pos].to_string());
-            pos+=1;
-        } else if spaces.contains(input[pos]) {
+        for l in (1..maxl).rev() {
+            if pos + l < input.len() {
+                let mut op = String::from("");
+                for i in pos..pos+l {
+                    op.push(input[i])
+                }
+                if ops.contains(&&*op) {
+                    pos += l;
+                    ret.push(op);
+                    break
+                }
+            }
+        }
+        if spaces.contains(input[pos]) {
             if "" != tok {
                 ret.push(tok);
                 tok = String::new();
