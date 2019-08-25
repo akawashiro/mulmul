@@ -29,7 +29,8 @@ pub enum Op {
     Gte,
     Equal,
     And,
-    Or
+    Or,
+    Cons
 }
 
 impl PartialEq for Op{
@@ -66,7 +67,8 @@ impl fmt::Display for Op{
             Gte => write!(f, ">="),
             Equal => write!(f, "=="),
             And => write!(f, "&&"),
-            Or => write!(f, "||")
+            Or => write!(f, "||"),
+            Cons => write!(f, "::")
         }
     }
 }
@@ -74,6 +76,7 @@ impl fmt::Display for Op{
 #[derive(Debug, Clone)]
 pub enum Expr {
     Epsilon,
+    Nil,
     Boolean(bool),
     Number(i64),
     Variable(Variable),
@@ -92,6 +95,7 @@ impl fmt::Display for Expr{
         use Expr::*;
         match self {
             Epsilon => write!(f, "epsilon"),
+            Nil => write!(f, "[]"),
             Boolean(b) => {
                 if *b {
                     write!(f, "true")

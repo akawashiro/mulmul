@@ -5,6 +5,7 @@ use crate::expr::Variable;
 pub fn is_value(expr: &Expr) -> bool {
     match expr {
         Expr::Epsilon => true,
+        Expr::Nil => true,
         Expr::Boolean(_) => true,
         Expr::Number(_) => true,
         Expr::Variable(_) => true,
@@ -18,6 +19,7 @@ pub fn is_value(expr: &Expr) -> bool {
             }
             true
         }
+        Expr::BinOp(Op::Cons, e1, e2) => is_value(e1) && is_value(e2),
         _ => false
     }
 }
@@ -47,6 +49,15 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                         (Op::Equal, Expr::Number(i1), Expr::Number(i2)) => Expr::Boolean(i1==i2),
                         (Op::And, Expr::Boolean(b1), Expr::Boolean(b2)) => Expr::Boolean(b1&&b2),
                         (Op::Or, Expr::Boolean(b1), Expr::Boolean(b2)) => Expr::Boolean(b1||b2),
+                        (Op::Cons, e1, e2) => {
+                            if !is_value(&e1) {
+                                Expr::BinOp(Op::Cons, Box::new(eval_one_step(e1)), Box::new(e2))
+                            } else if !is_value(&e2) {
+                                Expr::BinOp(Op::Cons, Box::new(e1), Box::new(eval_one_step(e2)))
+                            } else {
+                                unreachable!()
+                            }
+                        },
                         _ => unreachable!()
                     }
                 }
@@ -112,7 +123,7 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                 }
                 Expr::Tuple(es2)
             },
-            Expr::Epsilon | Expr::Boolean(_) | Expr::Number(_) | Expr::Variable(_) | Expr::Fun(_,_) | Expr::Quote(_,_) => unreachable!(),
+            Expr::Epsilon | Expr::Boolean(_) | Expr::Number(_) | Expr::Variable(_) | Expr::Fun(_,_) | Expr::Quote(_,_) | Expr::Nil => unreachable!(),
         }
     }
 }
@@ -126,7 +137,7 @@ fn subst_expr(var: &Variable, arg: Expr, expr: Expr) -> Expr {
                 Expr::Variable(v)
             }
         },
-        Expr::Epsilon | Expr::Boolean(_) | Expr::Number(_) => expr,
+        Expr::Epsilon | Expr::Boolean(_) | Expr::Number(_) | Expr::Nil => expr,
         Expr::BinOp(o, e1, e2) => {
             Expr::BinOp(o, Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))
         },

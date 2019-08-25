@@ -40,6 +40,21 @@ fn parse_boolean_constant(lexer: &mut Lexer) -> Result<Expr, String> {
     }
 }
 
+fn parse_list_expr(lexer: &mut Lexer) -> Result<Expr, String> {
+    let head = parse_boolean_expr(lexer)?;
+    if lexer.is_end() {
+        return Ok(head)
+    }
+    let o = lexer.peek();
+    if o == "::" {
+        lexer.getone();
+        let rest = parse_list_expr(lexer)?;
+        Ok(Expr::BinOp(Op::Cons, Box::new(head), Box::new(rest)))
+    } else {
+        Ok(head)
+    }
+}
+
 fn parse_boolean_expr(lexer: &mut Lexer) -> Result<Expr, String> {
     let head = parse_boolean_term_expr(lexer)?;
     let mut ret = head;
@@ -139,6 +154,7 @@ fn parse_factor(lexer: &mut Lexer) -> Result<Expr, String> {
             boxfn!(parse_number), 
             boxfn!(parse_paren_expr),
             boxfn!(parse_epsilon),
+            boxfn!(parse_nil),
             boxfn!(parse_boolean_constant))(lexer)
     }
 }
@@ -221,6 +237,11 @@ fn parse_string(s: String) -> Box<dyn Fn(&mut Lexer) -> Result<String, String>>{
     })
 }
 
+fn parse_nil(lexer: &mut Lexer) -> Result<Expr, String> {
+    parse_string("[]".to_string())(lexer)?;
+    Ok(Expr::Nil)
+}
+
 fn parse_epsilon(lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("epsilon".to_string())(lexer)?;
     Ok(Expr::Epsilon)
@@ -292,7 +313,7 @@ pub fn parse_expr(lexer: &mut Lexer) -> Result<Expr, String> {
         boxfn!(parse_fun),
         boxfn!(parse_let),
         boxfn!(parse_if),
-        boxfn!(parse_boolean_expr))(lexer)
+        boxfn!(parse_list_expr))(lexer)
 }
 
 

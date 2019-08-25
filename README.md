@@ -14,7 +14,6 @@ Separators are
 expr ::= "if" expr "then" expr "else" expr
        | "fun" pattern "->" expr
        | "let" pattern = expr "in" expr
-       | boolean_expr
        | list_expr
        | "quote" variable expr
        | "unquote" variable expr
@@ -23,8 +22,8 @@ expr ::= "if" expr "then" expr "else" expr
 inside_match ::= pattern "->" expr
                | pattern "->" expr "|" inside_match
 
-list_expr ::= "[]"
-            | expr "::" list_expr
+list_expr ::= boolean_expr "::" list_expr
+            | boolean_expr
 
 inside_list ::= expr ";" inside_list
               | expr
@@ -70,6 +69,7 @@ factor ::= number
          | "(" inside_tuple ")"
          | "epsilon"
          | boolean_constant
+         | "[]"
 
 inside_tuple ::= expr "," inside_tuple
 ```

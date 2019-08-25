@@ -8,24 +8,24 @@ use eval::is_value;
 use eval::eval_one_step;
 use std::io::{self, Write};
 
-fn test_with_input_string(vs: Vec<String>) {
-    for s in vs {
-        let mut lexer = Lexer::new(s);
-        let r = parse_expr(&mut lexer);
-        match r {
-            Ok(e) => {
-                let mut e2 = e;
-                println!("{}", e2);
-                while !is_value(&e2) {
-                    e2 = eval_one_step(e2);
-                    println!("{}", e2);
-                }
-            },
-            Err(_) => ()
-        }
-        println!("========================");
-    }
-}
+// fn test_with_input_string(vs: Vec<String>) {
+//     for s in vs {
+//         let mut lexer = Lexer::new(s);
+//         let r = parse_expr(&mut lexer);
+//         match r {
+//             Ok(e) => {
+//                 let mut e2 = e;
+//                 println!("{}", e2);
+//                 while !is_value(&e2) {
+//                     e2 = eval_one_step(e2);
+//                     println!("{}", e2);
+//                 }
+//             },
+//             Err(_) => ()
+//         }
+//         println!("========================");
+//     }
+// }
 
 fn repl() {
     loop {
