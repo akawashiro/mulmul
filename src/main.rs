@@ -15,10 +15,10 @@ fn test_with_input_string(vs: Vec<String>) {
         match r {
             Ok(e) => {
                 let mut e2 = e;
-                println!("{:?}", e2.show());
+                println!("{}", e2);
                 while !is_value(&e2) {
                     e2 = eval_one_step(e2);
-                    println!("{:?}", e2.show());
+                    println!("{}", e2);
                 }
             },
             Err(_) => ()
@@ -39,10 +39,10 @@ fn repl() {
         match r {
             Ok(e) => {
                 let mut e2 = e;
-                println!("{}", e2.show());
+                println!("{}", e2);
                 while !is_value(&e2) {
                     e2 = eval_one_step(e2);
-                    println!("{}", e2.show());
+                    println!("{}", e2);
                 }
             },
             Err(e) => println!("{:?}", e)

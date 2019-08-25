@@ -41,7 +41,7 @@ tuple_pattern ::= "(" inside_tuple_pattern ")"
 inside_tuple_pattern ::= pattern
                        | pattern "," inside_tuple_pattern
 
-boolean ::= "true" | "false"
+boolean_constant ::= "true" | "false"
 
 boolean_expr ::= boolean_term_expr "&&" boolean_expr
                | boolean_term_expr "||" boolean_expr
@@ -69,7 +69,7 @@ factor ::= number
          | variable
          | "(" inside_tuple ")"
          | "epsilon"
-         | boolean
+         | boolean_constant
 
 inside_tuple ::= expr "," inside_tuple
 ```

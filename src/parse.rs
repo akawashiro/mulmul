@@ -1,5 +1,6 @@
 use crate::lexer::Lexer;
 use crate::expr::Expr;
+use crate::expr::Op;
 use crate::expr::Variable;
 
 macro_rules! boxfn {
@@ -21,7 +22,7 @@ macro_rules! or {
     ($head:expr, $($rest:expr),+) => { combine_or($head, or!($($rest),+)) };
 }
 
-fn parse_boolean(lexer: &mut Lexer) -> Result<Expr, String> {
+fn parse_boolean_constant(lexer: &mut Lexer) -> Result<Expr, String> {
     let t = lexer.peek();
     match &*t {
         "true" => {
@@ -36,6 +37,51 @@ fn parse_boolean(lexer: &mut Lexer) -> Result<Expr, String> {
             let e = format!("This token {} cannot interpret as a boolean.", &*t);
             Err(e.to_string())
         }
+    }
+}
+
+fn parse_boolean_expr(lexer: &mut Lexer) -> Result<Expr, String> {
+    let head = parse_boolean_term_expr(lexer)?;
+    let mut ret = head;
+    loop {
+        if lexer.is_end() {
+            return Ok(ret)
+        }
+        let o = lexer.peek();
+        if o == "&&" {
+            lexer.getone();
+            let e = parse_boolean_term_expr(lexer)?;
+            ret = Expr::BinOp(Op::And, Box::new(ret), Box::new(e))
+        } else if o == "||" {
+            lexer.getone();
+            let e = parse_boolean_term_expr(lexer)?;
+            ret = Expr::BinOp(Op::Or, Box::new(ret), Box::new(e))
+        } else {
+            return Ok(ret)
+        }
+    }
+}
+
+fn parse_boolean_term_expr(lexer: &mut Lexer) -> Result<Expr, String> {
+    let e1 = parse_numerical_expr(lexer)?;
+    if lexer.is_end() {
+        return Ok(e1)
+    }
+    let t = lexer.peek();
+    let ops = vec!["<", ">", "<=", ">=", "=="];
+    if ops.contains(&&*t) {
+        lexer.getone();
+        let e2 = parse_numerical_expr(lexer)?;
+        match &*t {
+            "<" => Ok(Expr::BinOp(Op::Lt, Box::new(e1), Box::new(e2))),
+            "<=" => Ok(Expr::BinOp(Op::Lte, Box::new(e1), Box::new(e2))),
+            ">" => Ok(Expr::BinOp(Op::Gt, Box::new(e1), Box::new(e2))),
+            ">=" => Ok(Expr::BinOp(Op::Gte, Box::new(e1), Box::new(e2))),
+            "==" => Ok(Expr::BinOp(Op::Equal, Box::new(e1), Box::new(e2))),
+            _ => Err(format!("This token {} is not a operator in parse_boolean_term_expr", t))
+        }
+    } else {
+        Ok(e1)
     }
 }
 
@@ -93,7 +139,7 @@ fn parse_factor(lexer: &mut Lexer) -> Result<Expr, String> {
             boxfn!(parse_number), 
             boxfn!(parse_paren_expr),
             boxfn!(parse_epsilon),
-            boxfn!(parse_boolean))(lexer)
+            boxfn!(parse_boolean_constant))(lexer)
     }
 }
 
@@ -108,11 +154,11 @@ fn parse_term(lexer: &mut Lexer) -> Result<Expr, String> {
         if o == "*" {
             lexer.getone();
             let e = parse_app(lexer)?;
-            ret = Expr::Times(Box::new(ret), Box::new(e))
+            ret = Expr::BinOp(Op::Times, Box::new(ret), Box::new(e))
         } else if o == "/" {
             lexer.getone();
             let e = parse_app(lexer)?;
-            ret = Expr::Divides(Box::new(ret), Box::new(e))
+            ret = Expr::BinOp(Op::Divides, Box::new(ret), Box::new(e))
         } else {
             return Ok(ret)
         }
@@ -130,11 +176,11 @@ fn parse_numerical_expr(lexer: &mut Lexer) -> Result<Expr, String> {
         if o == "+" {
             lexer.getone();
             let e = parse_term(lexer)?;
-            ret = Expr::Plus(Box::new(ret), Box::new(e))
+            ret = Expr::BinOp(Op::Plus, Box::new(ret), Box::new(e))
         } else if o == "-" {
             lexer.getone();
             let e = parse_term(lexer)?;
-            ret = Expr::Minus(Box::new(ret), Box::new(e))
+            ret = Expr::BinOp(Op::Minus, Box::new(ret), Box::new(e))
         } else {
             return Ok(ret)
         }
@@ -246,7 +292,7 @@ pub fn parse_expr(lexer: &mut Lexer) -> Result<Expr, String> {
         boxfn!(parse_fun),
         boxfn!(parse_let),
         boxfn!(parse_if),
-        boxfn!(parse_numerical_expr))(lexer)
+        boxfn!(parse_boolean_expr))(lexer)
 }
 
 

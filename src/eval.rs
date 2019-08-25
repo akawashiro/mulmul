@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::expr::Op;
 use crate::expr::Variable;
 
 pub fn is_value(expr: &Expr) -> bool {
@@ -26,58 +27,26 @@ pub fn eval_one_step(expr: Expr) -> Expr {
         expr
     } else {
         match expr {
-            Expr::Plus(e1, e2) => {
+            Expr::BinOp(o, e1, e2) => {
                 if !is_value(&*e1) {
                     let e3 = eval_one_step(*e1);
-                    Expr::Plus(Box::new(e3), e2)
+                    Expr::BinOp(o, Box::new(e3), e2)
                 } else if !is_value(&*e2) {
                     let e3 = eval_one_step(*e2);
-                    Expr::Plus(e1, Box::new(e3))
+                    Expr::BinOp(o, e1, Box::new(e3))
                 } else {
-                    match (*e1, *e2) {
-                        (Expr::Number(i1), Expr::Number(i2)) => Expr::Number(i1+i2),
-                        _ => unreachable!()
-                    }
-                }
-            },
-            Expr::Times(e1, e2) => {
-                if !is_value(&*e1) {
-                    let e3 = eval_one_step(*e1);
-                    Expr::Plus(Box::new(e3), e2)
-                } else if !is_value(&*e2) {
-                    let e3 = eval_one_step(*e2);
-                    Expr::Plus(e1, Box::new(e3))
-                } else {
-                    match (*e1, *e2) {
-                        (Expr::Number(i1), Expr::Number(i2)) => Expr::Number(i1*i2),
-                        _ => unreachable!()
-                    }
-                }
-            },
-            Expr::Minus(e1, e2) => {
-                if !is_value(&*e1) {
-                    let e3 = eval_one_step(*e1);
-                    Expr::Plus(Box::new(e3), e2)
-                } else if !is_value(&*e2) {
-                    let e3 = eval_one_step(*e2);
-                    Expr::Plus(e1, Box::new(e3))
-                } else {
-                    match (*e1, *e2) {
-                        (Expr::Number(i1), Expr::Number(i2)) => Expr::Number(i1-i2),
-                        _ => unreachable!()
-                    }
-                }
-            },
-            Expr::Divides(e1, e2) => {
-                if !is_value(&*e1) {
-                    let e3 = eval_one_step(*e1);
-                    Expr::Plus(Box::new(e3), e2)
-                } else if !is_value(&*e2) {
-                    let e3 = eval_one_step(*e2);
-                    Expr::Plus(e1, Box::new(e3))
-                } else {
-                    match (*e1, *e2) {
-                        (Expr::Number(i1), Expr::Number(i2)) => Expr::Number(i1/i2),
+                    match (o, *e1, *e2) {
+                        (Op::Plus, Expr::Number(i1), Expr::Number(i2)) => Expr::Number(i1+i2),
+                        (Op::Minus, Expr::Number(i1), Expr::Number(i2)) => Expr::Number(i1-i2),
+                        (Op::Times, Expr::Number(i1), Expr::Number(i2)) => Expr::Number(i1*i2),
+                        (Op::Divides, Expr::Number(i1), Expr::Number(i2)) => Expr::Number(i1/i2),
+                        (Op::Lt, Expr::Number(i1), Expr::Number(i2)) => Expr::Boolean(i1<i2),
+                        (Op::Lte, Expr::Number(i1), Expr::Number(i2)) => Expr::Boolean(i1<=i2),
+                        (Op::Gt, Expr::Number(i1), Expr::Number(i2)) => Expr::Boolean(i1>i2),
+                        (Op::Gte, Expr::Number(i1), Expr::Number(i2)) => Expr::Boolean(i1>=i2),
+                        (Op::Equal, Expr::Number(i1), Expr::Number(i2)) => Expr::Boolean(i1==i2),
+                        (Op::And, Expr::Boolean(b1), Expr::Boolean(b2)) => Expr::Boolean(b1&&b2),
+                        (Op::Or, Expr::Boolean(b1), Expr::Boolean(b2)) => Expr::Boolean(b1||b2),
                         _ => unreachable!()
                     }
                 }
@@ -158,17 +127,8 @@ fn subst_expr(var: &Variable, arg: Expr, expr: Expr) -> Expr {
             }
         },
         Expr::Epsilon | Expr::Boolean(_) | Expr::Number(_) => expr,
-        Expr::Plus(e1,e2) => {
-            Expr::Plus(Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))
-        },
-        Expr::Minus(e1,e2) => {
-            Expr::Minus(Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))
-        },
-        Expr::Times(e1,e2) => {
-            Expr::Times(Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))
-        },
-        Expr::Divides(e1,e2) => {
-            Expr::Divides(Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))
+        Expr::BinOp(o, e1, e2) => {
+            Expr::BinOp(o, Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))
         },
         Expr::If(c,e1,e2) => {
             Expr::If(Box::new(subst_expr(var, arg.clone(), *c)), Box::new(subst_expr(var, arg.clone(), *e1)), Box::new(subst_expr(var, arg, *e2)))

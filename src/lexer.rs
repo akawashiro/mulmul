@@ -4,7 +4,7 @@ fn tokenize(input_s: String) -> Vec<String> {
     let mut pos : usize = 0;
     let mut tok : String = String::new();
     // let ops = "+*/-()";
-    let ops = vec![",","+","*","-","/","->","=","*)","(*","(",")"];
+    let ops = vec![",","+","*","-","/","->","=","*)","(*","(",")","&&","||","<",">","<=",">=","=="];
     let maxl = (&ops).into_iter().map(|x| x.len()).max().unwrap();
     let spaces = " \n\t";
     loop {
