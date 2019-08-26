@@ -28,14 +28,14 @@ list_expr ::= boolean_expr "::" list_expr
 inside_list ::= expr ";" inside_list
               | expr
 
-pattern ::= variable
-          | tuple_pattern 
-          | list_pattern
+pattern ::= list_pattern
 
-list_pattern ::= variable "::" list_pattern
-               | tuple_pattern :: list_pattern
+list_pattern ::= tuple_pattern "::" list_pattern
+                | tuple_pattern
 
 tuple_pattern ::= "(" inside_tuple_pattern ")"
+                | variable
+                | "[]"
 
 inside_tuple_pattern ::= pattern
                        | pattern "," inside_tuple_pattern

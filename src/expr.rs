@@ -74,6 +74,52 @@ impl fmt::Display for Op{
 }
 
 #[derive(Debug, Clone)]
+pub enum Pattern {
+    Variable(Variable),
+    Tuple(Vec<Box<Pattern>>),
+    Cons(Box<Pattern>, Box<Pattern>),
+    Nil
+}
+
+impl fmt::Display for Pattern {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Pattern::*;
+        match self {
+            Variable(v) => write!(f, "{}", v),
+            Tuple(ps) => {
+                let mut r = String::from("(");
+                for (i, p) in ps.iter().enumerate() {
+                    if i == 0 {
+                        r = format!("{}{}", r, p)
+                    } else {
+                        r = format!("{},{}", r, p)
+                    }
+                }
+                r = format!("{})",r);
+                write!(f,"{}", r)
+            },
+            Cons(p1, p2) => {
+                write!(f, "{} :: {}", p1, p2)
+            },
+            Nil => write!(f, "[]")
+        }
+    }
+}
+
+impl PartialEq for Pattern{
+    fn eq(&self, other: &Self) -> bool {
+        use Pattern::*;
+        match (self, other) {
+            (Variable(v1), Variable(v2)) if v1 == v2 => true,
+            (Tuple(ps1), Tuple(ps2)) if ps1 == ps2 => true,
+            (Cons(p1, p2), Cons(p3, p4)) if p1 == p3 && p2 == p4 => true,
+            (Nil, Nil) => true,
+            _ => false
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Epsilon,
     Nil,
@@ -81,10 +127,10 @@ pub enum Expr {
     Number(i64),
     Variable(Variable),
     BinOp(Op, Box<Expr>, Box<Expr>),
-    Fun(Variable, Box<Expr>),
+    Fun(Pattern, Box<Expr>),
     App(Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Let(Variable, Box<Expr>, Box<Expr>),
+    Let(Pattern, Box<Expr>, Box<Expr>),
     Quote(Variable, Box<Expr>),
     UnQuote(Variable, Box<Expr>),
     Tuple(Vec<Box<Expr>>)
@@ -135,6 +181,7 @@ impl PartialEq for Expr{
             (Epsilon, Epsilon) => true,
             (Boolean(b1), Boolean(b2)) if b1 == b2 => true,
             (Number(i1), Number(i2)) if i1 == i2 => true,
+            (Variable(v1), Variable(v2)) if v1 == v2 => true,
             (BinOp(o1, e1, e2), BinOp(o2, e3, e4)) if o1 == o2 && e1 == e3 && e2 == e4 => true,
             (Fun(v1,e1), Fun(v2,e2)) if v1 == v2 && e1 == e2 => true,
             (App(e1,e2), App(e3,e4)) if e1 == e3 && e2 == e4 => true,
@@ -142,6 +189,7 @@ impl PartialEq for Expr{
             (Let(e1,e2,e3), Let(e4,e5,e6)) if e1 == e4 && e2 == e5 && e3 == e6 => true,
             (Quote(v1,e1), Quote(v2,e2)) if v1 == v2 && e1 == e2 => true,
             (UnQuote(v1,e1), UnQuote(v2,e2)) if v1 == v2 && e1 == e2 => true,
+            (Tuple(es1), Tuple(es2)) if es1 == es2 => true,
             _ => false
         }
     }

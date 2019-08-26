@@ -1,5 +1,6 @@
 use crate::lexer::Lexer;
 use crate::expr::Expr;
+use crate::expr::Pattern;
 use crate::expr::Op;
 use crate::expr::Variable;
 
@@ -7,8 +8,8 @@ macro_rules! boxfn {
     ($x: expr) => { Box::new($x) }
 }
 
-fn combine_or (p1: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>, p2: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>) -> Box<dyn Fn(&mut Lexer) -> Result<Expr, String>> {
-    Box::new(move |lexer: &mut Lexer| -> Result<Expr, String>{
+fn combinator_or<T: 'static> (p1: Box<dyn Fn(&mut Lexer) -> Result<T, String>>, p2: Box<dyn Fn(&mut Lexer) -> Result<T, String>>) -> Box<dyn Fn(&mut Lexer) -> Result<T, String>> {
+    Box::new(move |lexer: &mut Lexer| -> Result<T, String>{
         let r = p1(lexer);
         match r {
             Ok(e) => Ok(e),
@@ -19,7 +20,80 @@ fn combine_or (p1: Box<dyn Fn(&mut Lexer) -> Result<Expr, String>>, p2: Box<dyn 
 
 macro_rules! or {
     ($base:expr) => { $base };
-    ($head:expr, $($rest:expr),+) => { combine_or($head, or!($($rest),+)) };
+    ($head:expr, $($rest:expr),+) => { combinator_or($head, or!($($rest),+)) };
+}
+
+fn combinator_parens<T: 'static>(p: Box<dyn Fn(&mut Lexer) -> Result<T, String>>) -> Box<dyn Fn(&mut Lexer) -> Result<T, String>> {
+    Box::new(move |lexer: &mut Lexer| -> Result<T, String>{
+        let t = lexer.peek();
+        match &*t {
+            "(" => {
+                lexer.getone();
+                let e = p(lexer)?;
+                let t = lexer.peek();
+                match &*t {
+                    ")" => {
+                        lexer.getone();
+                        Ok(e)
+                    },
+                    _ => Err(format!("combinator_parens failed. The last token is {}.", t))
+                }
+            },
+            _ => Err(format!("combinator_parens failed. The first token is {}.", t))
+        }
+    })
+}
+
+fn parse_pattern(lexer: &mut Lexer) -> Result<Pattern, String> {
+    parse_list_pattern(lexer)
+}
+
+fn parse_list_pattern(lexer: &mut Lexer) -> Result<Pattern, String> {
+    let head = parse_tuple_pattern(lexer)?;
+    if lexer.is_end() {
+        return Ok(head)
+    }
+    let o = lexer.peek();
+    if o == "::" {
+        lexer.getone();
+        let rest = parse_list_pattern(lexer)?;
+        Ok(Pattern::Cons(Box::new(head), Box::new(rest)))
+    } else {
+        Ok(head)
+    }
+}
+
+fn parse_tuple_pattern(lexer: &mut Lexer) -> Result<Pattern, String> {
+    or!(combinator_parens(boxfn!(parse_inside_tuple_pattern)), 
+        boxfn!(parse_variable_pattern),
+        boxfn!(parse_nil_pattern))(lexer)
+}
+
+fn parse_nil_pattern(lexer: &mut Lexer) -> Result<Pattern, String> {
+    parse_string("[]".to_string())(lexer)?;
+    Ok(Pattern::Nil)
+}
+
+fn parse_inside_tuple_pattern(lexer: &mut Lexer) -> Result<Pattern, String> {
+    let head = parse_pattern(lexer)?;
+    let mut es = vec![Box::new(head.clone())];
+    loop {
+        if lexer.is_end() {
+            return Ok(head)
+        }
+        let o = lexer.peek();
+        if o == "," {
+            lexer.getone();
+            let e = parse_pattern(lexer)?;
+            es.push(Box::new(e))
+        } else {
+            if es.len() > 1 {
+                return Ok(Pattern::Tuple(es))
+            } else {
+                return Ok(head)
+            }
+        }
+    }
 }
 
 fn parse_boolean_constant(lexer: &mut Lexer) -> Result<Expr, String> {
@@ -141,6 +215,11 @@ fn parse_variable(lexer: &mut Lexer) -> Result<Variable, String> {
     }
 }
 
+fn parse_variable_pattern(lexer: &mut Lexer) -> Result<Pattern, String> {
+    let v = parse_variable(lexer)?;
+        Ok(Pattern::Variable(v))
+}
+
 fn parse_variable_expr(lexer: &mut Lexer) -> Result<Expr, String> {
     let v = parse_variable(lexer)?;
         Ok(Expr::Variable(v))
@@ -259,20 +338,20 @@ fn parse_if (lexer: &mut Lexer) -> Result<Expr, String> {
 
 fn parse_fun (lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("fun".to_string())(lexer)?;
-    let var = parse_variable(lexer)?;
+    let p = parse_pattern(lexer)?;
     parse_string("->".to_string())(lexer)?;
     let e = parse_expr(lexer)?;
-    Ok(Expr::Fun(var, Box::new(e)))
+    Ok(Expr::Fun(p, Box::new(e)))
 }
 
 fn parse_let (lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("let".to_string())(lexer)?;
-    let var = parse_variable(lexer)?;
+    let p = parse_pattern(lexer)?;
     parse_string("=".to_string())(lexer)?;
     let e1 = parse_expr(lexer)?;
     parse_string("in".to_string())(lexer)?;
     let e2 = parse_expr(lexer)?;
-    Ok(Expr::Let(var, Box::new(e1), Box::new(e2)))
+    Ok(Expr::Let(p, Box::new(e1), Box::new(e2)))
 }
 
 fn parse_quote (lexer: &mut Lexer) -> Result<Expr, String> {
