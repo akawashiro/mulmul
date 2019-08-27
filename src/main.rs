@@ -4,8 +4,8 @@ mod expr;
 mod parse;
 use parse::parse_expr;
 mod eval;
-use eval::is_value;
 use eval::eval_one_step;
+use eval::is_value;
 use std::io::{self, Write};
 
 // fn test_with_input_string(vs: Vec<String>) {
@@ -44,10 +44,9 @@ fn repl() {
                     e2 = eval_one_step(e2);
                     println!("{}", e2);
                 }
-            },
-            Err(e) => println!("{:?}", e)
+            }
+            Err(e) => println!("{:?}", e),
         }
-
     }
 }
 

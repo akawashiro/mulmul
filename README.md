@@ -3,12 +3,14 @@
 ## Tokenizer
 
 Separators are
-- `+`, `*`, `-`, `/`
 - spaces
+- `->`
+- `+`, `*`, `-`, `/`, `<`, `>`, `<=`, `>=`, `==`
 - `(*`, `*)`
-- `(`, `)`
+- `(`, `)`, `,`
+- `::`, `::`
 
-## Grammar
+## Parser
 
 ```
 expr ::= "if" expr "then" expr "else" expr

@@ -2,16 +2,16 @@ use std::fmt;
 
 #[derive(Debug, Clone, Eq, Hash)]
 pub struct Variable {
-    pub name: Box<String>
+    pub name: Box<String>,
 }
 
-impl fmt::Display for Variable{
+impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
 }
 
-impl PartialEq for Variable{
+impl PartialEq for Variable {
     fn eq(&self, other: &Self) -> bool {
         *self.name == *other.name
     }
@@ -30,10 +30,10 @@ pub enum Op {
     Equal,
     And,
     Or,
-    Cons
+    Cons,
 }
 
-impl PartialEq for Op{
+impl PartialEq for Op {
     fn eq(&self, other: &Self) -> bool {
         use Op::*;
         match (self, other) {
@@ -48,12 +48,12 @@ impl PartialEq for Op{
             (Equal, Equal) => true,
             (And, And) => true,
             (Or, Or) => true,
-            _ => false
+            _ => false,
         }
     }
 }
 
-impl fmt::Display for Op{
+impl fmt::Display for Op {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Op::*;
         match self {
@@ -68,7 +68,7 @@ impl fmt::Display for Op{
             Equal => write!(f, "=="),
             And => write!(f, "&&"),
             Or => write!(f, "||"),
-            Cons => write!(f, "::")
+            Cons => write!(f, "::"),
         }
     }
 }
@@ -78,7 +78,7 @@ pub enum Pattern {
     Variable(Variable),
     Tuple(Vec<Box<Pattern>>),
     Cons(Box<Pattern>, Box<Pattern>),
-    Nil
+    Nil,
 }
 
 impl fmt::Display for Pattern {
@@ -95,18 +95,16 @@ impl fmt::Display for Pattern {
                         r = format!("{},{}", r, p)
                     }
                 }
-                r = format!("{})",r);
-                write!(f,"{}", r)
-            },
-            Cons(p1, p2) => {
-                write!(f, "{} :: {}", p1, p2)
-            },
-            Nil => write!(f, "[]")
+                r = format!("{})", r);
+                write!(f, "{}", r)
+            }
+            Cons(p1, p2) => write!(f, "{} :: {}", p1, p2),
+            Nil => write!(f, "[]"),
         }
     }
 }
 
-impl PartialEq for Pattern{
+impl PartialEq for Pattern {
     fn eq(&self, other: &Self) -> bool {
         use Pattern::*;
         match (self, other) {
@@ -114,7 +112,7 @@ impl PartialEq for Pattern{
             (Tuple(ps1), Tuple(ps2)) if ps1 == ps2 => true,
             (Cons(p1, p2), Cons(p3, p4)) if p1 == p3 && p2 == p4 => true,
             (Nil, Nil) => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -133,10 +131,10 @@ pub enum Expr {
     Let(Pattern, Box<Expr>, Box<Expr>),
     Quote(Variable, Box<Expr>),
     UnQuote(Variable, Box<Expr>),
-    Tuple(Vec<Box<Expr>>)
+    Tuple(Vec<Box<Expr>>),
 }
 
-impl fmt::Display for Expr{
+impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Expr::*;
         match self {
@@ -148,16 +146,16 @@ impl fmt::Display for Expr{
                 } else {
                     write!(f, "false")
                 }
-            },
+            }
             Number(i) => write!(f, "{}", i),
             Variable(v) => write!(f, "{}", v),
             BinOp(o, e1, e2) => write!(f, "({} {} {})", e1, o, e2),
-            Fun(v,e) => write!(f, "(fun {} -> {})", v, e),
-            App(e1, e2) => write!(f,"({} {})",e1,e2),
-            If(e1, e2, e3) => write!(f,"if {} then {} else {}",e1,e2,e3),
-            Let(v, e1, e2) => write!(f,"let {} = {} in {}",v, e1,e2),
-            Quote(v,e) => write!(f,"(quote {} {})", v, e),
-            UnQuote(v,e) => write!(f,"(unquote {} {})", v, e),
+            Fun(v, e) => write!(f, "(fun {} -> {})", v, e),
+            App(e1, e2) => write!(f, "({} {})", e1, e2),
+            If(e1, e2, e3) => write!(f, "if {} then {} else {}", e1, e2, e3),
+            Let(v, e1, e2) => write!(f, "let {} = {} in {}", v, e1, e2),
+            Quote(v, e) => write!(f, "(quote {} {})", v, e),
+            UnQuote(v, e) => write!(f, "(unquote {} {})", v, e),
             Tuple(es) => {
                 let mut r = String::from("(");
                 for (i, e) in es.iter().enumerate() {
@@ -167,14 +165,14 @@ impl fmt::Display for Expr{
                         r = format!("{},{}", r, e)
                     }
                 }
-                r = format!("{})",r);
-                write!(f,"{}", r)
+                r = format!("{})", r);
+                write!(f, "{}", r)
             }
         }
     }
 }
 
-impl PartialEq for Expr{
+impl PartialEq for Expr {
     fn eq(&self, other: &Self) -> bool {
         use Expr::*;
         match (self, other) {
@@ -183,14 +181,14 @@ impl PartialEq for Expr{
             (Number(i1), Number(i2)) if i1 == i2 => true,
             (Variable(v1), Variable(v2)) if v1 == v2 => true,
             (BinOp(o1, e1, e2), BinOp(o2, e3, e4)) if o1 == o2 && e1 == e3 && e2 == e4 => true,
-            (Fun(v1,e1), Fun(v2,e2)) if v1 == v2 && e1 == e2 => true,
-            (App(e1,e2), App(e3,e4)) if e1 == e3 && e2 == e4 => true,
-            (If(e1,e2,e3), If(e4,e5,e6)) if e1 == e4 && e2 == e5 && e3 == e6 => true,
-            (Let(e1,e2,e3), Let(e4,e5,e6)) if e1 == e4 && e2 == e5 && e3 == e6 => true,
-            (Quote(v1,e1), Quote(v2,e2)) if v1 == v2 && e1 == e2 => true,
-            (UnQuote(v1,e1), UnQuote(v2,e2)) if v1 == v2 && e1 == e2 => true,
+            (Fun(v1, e1), Fun(v2, e2)) if v1 == v2 && e1 == e2 => true,
+            (App(e1, e2), App(e3, e4)) if e1 == e3 && e2 == e4 => true,
+            (If(e1, e2, e3), If(e4, e5, e6)) if e1 == e4 && e2 == e5 && e3 == e6 => true,
+            (Let(e1, e2, e3), Let(e4, e5, e6)) if e1 == e4 && e2 == e5 && e3 == e6 => true,
+            (Quote(v1, e1), Quote(v2, e2)) if v1 == v2 && e1 == e2 => true,
+            (UnQuote(v1, e1), UnQuote(v2, e2)) if v1 == v2 && e1 == e2 => true,
             (Tuple(es1), Tuple(es2)) if es1 == es2 => true,
-            _ => false
+            _ => false,
         }
     }
 }
