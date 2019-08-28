@@ -27,9 +27,6 @@ inside_match ::= pattern "->" expr
 list_expr ::= boolean_expr "::" list_expr
             | boolean_expr
 
-inside_list ::= expr ";" inside_list
-              | expr
-
 pattern ::= list_pattern
 
 list_pattern ::= tuple_pattern "::" list_pattern
