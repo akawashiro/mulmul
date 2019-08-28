@@ -126,6 +126,20 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                 }
                 Expr::Tuple(es2)
             }
+            Expr::Match(expr, ms) => {
+                if !is_value(&*expr) {
+                    Expr::Match(Box::new(eval_one_step(*expr)), ms)
+                } else {
+                    for m in ms {
+                        let (p, e) = *m;
+                        match make_binding(&p, &expr) {
+                            Ok(b) => return subst_expr(b, e),
+                            Err(_) => (),
+                        }
+                    }
+                    unreachable!()
+                }
+            }
             Expr::Epsilon
             | Expr::Boolean(_)
             | Expr::Number(_)
@@ -199,6 +213,20 @@ fn subst_expr(bind: HashMap<Variable, Expr>, expr: Expr) -> Expr {
                 .map(|e| Box::new(subst_expr(bind.clone(), (**e).clone())))
                 .collect(),
         ),
+        Expr::Match(expr, ms) => {
+            let expr2 = subst_expr(bind.clone(), *expr);
+            let mut ms2 = Vec::new();
+            for m in ms {
+                let (p, e) = *m;
+                let vs = get_variables(&p);
+                let mut b = bind.clone();
+                for v in vs {
+                    b.remove(&v);
+                }
+                ms2.push(Box::new((p, subst_expr(b, e))));
+            }
+            Expr::Match(Box::new(expr2), ms2)
+        }
     }
 }
 

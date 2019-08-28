@@ -6,7 +6,7 @@ fn tokenize(input_s: String) -> Vec<String> {
     // let ops = "+*/-()";
     let ops = vec![
         "::", ",", "+", "*", "-", "/", "->", "=", "*)", "(*", "(", ")", "&&", "||", "<", ">", "<=",
-        ">=", "==",
+        ">=", "==", "|",
     ];
     let maxl = (&ops).into_iter().map(|x| x.len()).max().unwrap();
     let spaces = " \n\t";

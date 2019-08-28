@@ -132,6 +132,7 @@ pub enum Expr {
     Quote(Variable, Box<Expr>),
     UnQuote(Variable, Box<Expr>),
     Tuple(Vec<Box<Expr>>),
+    Match(Box<Expr>, Vec<Box<(Pattern, Expr)>>),
 }
 
 impl fmt::Display for Expr {
@@ -166,6 +167,18 @@ impl fmt::Display for Expr {
                     }
                 }
                 r = format!("{})", r);
+                write!(f, "{}", r)
+            }
+            Match(exp, ms) => {
+                let mut r = format!("match {} with", exp);
+                for (i, b) in ms.iter().enumerate() {
+                    let (p, e) = &**b;
+                    if i == 0 {
+                        r = format!("{} {} ->  {}", r, p, e)
+                    } else {
+                        r = format!("{} | {} ->  {}", r, p, e)
+                    }
+                }
                 write!(f, "{}", r)
             }
         }

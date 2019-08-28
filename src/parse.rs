@@ -225,6 +225,7 @@ fn parse_paren_expr(lexer: &mut Lexer) -> Result<Expr, String> {
 fn parse_variable(lexer: &mut Lexer) -> Result<Variable, String> {
     let keyword = vec![
         "if", "then", "else", "fun", "epsilon", "quote", "unquote", "true", "false", "let", "in",
+        "match", "with",
     ];
     let t = lexer.peek();
     if keyword.contains(&&*t) || !t.chars().nth(0).unwrap().is_alphabetic() {
@@ -348,6 +349,37 @@ fn parse_epsilon(lexer: &mut Lexer) -> Result<Expr, String> {
     Ok(Expr::Epsilon)
 }
 
+fn parse_match(lexer: &mut Lexer) -> Result<Expr, String> {
+    parse_string("match".to_string())(lexer)?;
+    let expr = parse_expr(lexer)?;
+    parse_string("with".to_string())(lexer)?;
+    let ms = parse_inside_match(lexer)?;
+    Ok(Expr::Match(Box::new(expr), ms))
+}
+
+fn parse_inside_match(lexer: &mut Lexer) -> Result<Vec<Box<(Pattern, Expr)>>, String> {
+    let hp = parse_pattern(lexer)?;
+    parse_string("->".to_string())(lexer)?;
+    let he = parse_expr(lexer)?;
+    let mut ms = Vec::new();
+    ms.push(Box::new((hp, he)));
+    loop {
+        if lexer.is_end() {
+            return Ok(ms);
+        }
+        let o = lexer.peek();
+        if o == "|" {
+            lexer.getone();
+            let p = parse_pattern(lexer)?;
+            parse_string("->".to_string())(lexer)?;
+            let e = parse_expr(lexer)?;
+            ms.push(Box::new((p, e)));
+        } else {
+            return Ok(ms);
+        }
+    }
+}
+
 fn parse_if(lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("if".to_string())(lexer)?;
     let cond = parse_expr(lexer)?;
@@ -415,6 +447,7 @@ pub fn parse_expr(lexer: &mut Lexer) -> Result<Expr, String> {
         boxfn!(parse_fun),
         boxfn!(parse_let),
         boxfn!(parse_if),
+        boxfn!(parse_match),
         boxfn!(parse_list_expr)
     )(lexer)
 }
