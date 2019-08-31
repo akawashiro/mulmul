@@ -11,6 +11,7 @@ pub fn is_value(expr: &Expr) -> bool {
         Expr::Boolean(_) => true,
         Expr::Number(_) => true,
         Expr::Fun(_, _) => true,
+        Expr::SFun(_, _) => true,
         Expr::Quote(_, _) => true,
         Expr::Tuple(es) => {
             for e in es {
@@ -71,6 +72,11 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                         Expr::Fun(pat, e3) => match make_binding(&pat, &e2) {
                             Ok(bs) => subst_expr(bs, *e3),
                             Err(_) => unreachable!(),
+                        },
+                        Expr::SFun(v, e3) => {
+                            let mut b = HashMap::new();
+                            b.insert(v, *e2);
+                            subst_expr(b, *e3)
                         },
                         _ => unreachable!(),
                     }
@@ -145,6 +151,7 @@ pub fn eval_one_step(expr: Expr) -> Expr {
             | Expr::Number(_)
             | Expr::Variable(_)
             | Expr::Fun(_, _)
+            | Expr::SFun(_, _)
             | Expr::Quote(_, _)
             | Expr::Nil => unreachable!(),
         }
@@ -174,6 +181,11 @@ fn subst_expr(bind: HashMap<Variable, Expr>, expr: Expr) -> Expr {
                 b.remove(&v);
             }
             Expr::Fun(pat, Box::new(subst_expr(b, *e)))
+        }
+        Expr::SFun(v, e) => {
+            let mut b = bind.clone();
+            b.remove(&v);
+            Expr::SFun(v, Box::new(subst_expr(b, *e)))
         }
         Expr::App(e1, e2) => Expr::App(
             Box::new(subst_expr(bind.clone(), *e1)),

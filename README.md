@@ -3,6 +3,7 @@ Multistage programming language
 
 ## Example
 
+### Lisp-like
 ```lisp
 (letrec vadd1 n v1 v2
   (sfun a 
@@ -16,20 +17,39 @@ Multistage programming language
                    (unquote a (vadd1 (- n 1) (unquote a v1) (unquote a v2)))))))))
 ```
 
+### OCaml-like
 ```ocaml
 let rec vadd1 n v1 v2 =
-  if n = 0
-  then 
-    .< [] >.
-  else
-    .< 
-    let t1 = List.tl .~v1 in
-    let t2 = List.tl .~v2 in
-    List.hd (.~v1) + List.hd (.~v2)
-    :: .~(vadd1 (n-1) .<t1>. .<t2>.) >.
+  sfun a ->
+    if n = 0
+    then 
+      |>_a []
+    else
+      |>_a ( 
+      let t1 = List.tl (<|_a v1) in
+      let t2 = List.tl (<|_a v2) in
+      List.hd (<|_a v1) + List.hd (<|_a v2)
+      :: <|_a (vadd1 (n-1) (|>_a t1) (|>_a t2)))
 
 let rec vadd n =
-  .< fun v1 -> fun v2 -> .~(vadd1 n .<v1>. .<v2>.)>.
+  |>_a (fun v1 -> fun v2 -> <|_a(vadd1 n (|>_a v1) (|>_a v2)))
+```
+
+```ocaml
+let rec vadd1 n v1 v2 =
+  sfun a ->
+    if n = 0
+    then 
+      quote a []
+    else
+      quote a ( 
+      let t1 = List.tl (unquote a v1) in
+      let t2 = List.tl (unquote a v2) in
+      List.hd (unquote a v1) + List.hd (unquote a v2)
+      :: unquote a (vadd1 (n-1) (quote a t1) (quote a t2)))
+
+let rec vadd n =
+  quote a (fun v1 -> fun v2 -> unquote a (vadd1 n (quote a v1) (quote a v2)))
 ```
 
 ## Tokenizer

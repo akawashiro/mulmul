@@ -225,7 +225,7 @@ fn parse_paren_expr(lexer: &mut Lexer) -> Result<Expr, String> {
 fn parse_variable(lexer: &mut Lexer) -> Result<Variable, String> {
     let keyword = vec![
         "if", "then", "else", "fun", "epsilon", "quote", "unquote", "true", "false", "let", "in",
-        "match", "with",
+        "match", "with", "sfun"
     ];
     let t = lexer.peek();
     if keyword.contains(&&*t) || !t.chars().nth(0).unwrap().is_alphabetic() {
@@ -398,6 +398,14 @@ fn parse_fun(lexer: &mut Lexer) -> Result<Expr, String> {
     Ok(Expr::Fun(p, Box::new(e)))
 }
 
+fn parse_sfun(lexer: &mut Lexer) -> Result<Expr, String> {
+    parse_string("sfun".to_string())(lexer)?;
+    let v = parse_variable(lexer)?;
+    parse_string("->".to_string())(lexer)?;
+    let e = parse_expr(lexer)?;
+    Ok(Expr::SFun(v, Box::new(e)))
+}
+
 fn parse_let(lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("let".to_string())(lexer)?;
     let p = parse_pattern(lexer)?;
@@ -445,6 +453,7 @@ pub fn parse_expr(lexer: &mut Lexer) -> Result<Expr, String> {
         boxfn!(parse_quote),
         boxfn!(parse_unquote),
         boxfn!(parse_fun),
+        boxfn!(parse_sfun),
         boxfn!(parse_let),
         boxfn!(parse_if),
         boxfn!(parse_match),
