@@ -118,6 +118,27 @@ impl PartialEq for Pattern {
 }
 
 #[derive(Debug, Clone)]
+pub enum Type {
+    Stage,
+    Bool,
+    Int,
+    Fun(Box<Type>, Box<Type>),
+    Code(Variable, Box<Type>)
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Stage => write!(f, "Stage"),
+            Bool => write!(f, "Bool"),
+            Int => write!(f, "Int"),
+            Type::Fun(t1, t2) => write!(f, "({} -> {})", t1, t2),
+            Type::Code(v, t) => write!(f, "(code {} {})", v, t)
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Epsilon,
     Nil,
@@ -208,3 +229,4 @@ impl PartialEq for Expr {
         }
     }
 }
+
