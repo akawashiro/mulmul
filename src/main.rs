@@ -6,6 +6,8 @@ use parse::parse_expr;
 mod eval;
 use eval::eval_one_step;
 use eval::is_value;
+mod typing;
+use typing::get_type;
 use std::io::{self, Write};
 
 // fn test_with_input_string(vs: Vec<String>) {
@@ -39,6 +41,16 @@ fn repl() {
         match r {
             Ok(e) => {
                 let mut e2 = e;
+                let t = get_type(&e2);
+                match t {
+                    Ok(t) => {
+                        println!("{}", t)
+                    }
+                    Err(s) => {
+                        println!("{}", s);
+                        continue
+                    }
+                }
                 println!("{}", e2);
                 while !is_value(&e2) {
                     e2 = eval_one_step(e2);

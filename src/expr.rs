@@ -122,16 +122,35 @@ pub enum Type {
     Stage,
     Bool,
     Int,
+    Unit,
+    TVar(Variable),
+    Tuple(Vec<Box<Type>>),
+    List(Box<Type>),
     Fun(Box<Type>, Box<Type>),
     Code(Variable, Box<Type>)
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Type::*;
         match self {
-            Stage => write!(f, "Stage"),
-            Bool => write!(f, "Bool"),
-            Int => write!(f, "Int"),
+            Stage => write!(f, "stage"),
+            Bool => write!(f, "bool"),
+            Int => write!(f, "int"),
+            Unit => write!(f, "()"),
+            TVar(v) => write!(f, "{}", v),
+            List(t) => write!(f, "{} list", t),
+            Tuple(ts) => {
+                let mut s = String::new();
+                for (i,t) in ts.iter().enumerate() {
+                    if i == 0 {
+                        s = format!("{}", t);
+                    } else {
+                        s = format!("{} * {}", s, t);
+                    }
+                }
+                write!(f, "{}", s)
+            }
             Type::Fun(t1, t2) => write!(f, "({} -> {})", t1, t2),
             Type::Code(v, t) => write!(f, "(code {} {})", v, t)
         }
