@@ -1,6 +1,7 @@
 use crate::expr::Expr;
 use crate::expr::Op;
 use crate::expr::Pattern;
+use crate::expr::Stage;
 use crate::expr::Variable;
 use crate::lexer::Lexer;
 
@@ -225,14 +226,28 @@ fn parse_paren_expr(lexer: &mut Lexer) -> Result<Expr, String> {
 fn parse_variable(lexer: &mut Lexer) -> Result<Variable, String> {
     let keyword = vec![
         "if", "then", "else", "fun", "epsilon", "quote", "unquote", "true", "false", "let", "in",
-        "match", "with", "sfun"
+        "match", "with", "sfun",
     ];
     let t = lexer.peek();
     if keyword.contains(&&*t) || !t.chars().nth(0).unwrap().is_alphabetic() {
         Err("parse_variable failed".to_string())
     } else {
         lexer.getone();
-        Ok(Variable { name: Box::new(t) })
+        Ok(Variable(t))
+    }
+}
+
+fn parse_stage(lexer: &mut Lexer) -> Result<Stage, String> {
+    let keyword = vec![
+        "if", "then", "else", "fun", "epsilon", "quote", "unquote", "true", "false", "let", "in",
+        "match", "with", "sfun",
+    ];
+    let t = lexer.peek();
+    if keyword.contains(&&*t) || !t.chars().nth(0).unwrap().is_alphabetic() {
+        Err("parse_stage failed".to_string())
+    } else {
+        lexer.getone();
+        Ok(Stage(t))
     }
 }
 
@@ -346,7 +361,7 @@ fn parse_nil(lexer: &mut Lexer) -> Result<Expr, String> {
 
 fn parse_epsilon(lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("epsilon".to_string())(lexer)?;
-    Ok(Expr::Epsilon)
+    Ok(Expr::Stage(Stage("".to_string())))
 }
 
 fn parse_match(lexer: &mut Lexer) -> Result<Expr, String> {
@@ -400,10 +415,10 @@ fn parse_fun(lexer: &mut Lexer) -> Result<Expr, String> {
 
 fn parse_sfun(lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("sfun".to_string())(lexer)?;
-    let v = parse_variable(lexer)?;
+    let s = parse_stage(lexer)?;
     parse_string("->".to_string())(lexer)?;
     let e = parse_expr(lexer)?;
-    Ok(Expr::SFun(v, Box::new(e)))
+    Ok(Expr::SFun(s, Box::new(e)))
 }
 
 fn parse_let(lexer: &mut Lexer) -> Result<Expr, String> {
@@ -418,16 +433,16 @@ fn parse_let(lexer: &mut Lexer) -> Result<Expr, String> {
 
 fn parse_quote(lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("quote".to_string())(lexer)?;
-    let var = parse_variable(lexer)?;
+    let s = parse_stage(lexer)?;
     let e = parse_expr(lexer)?;
-    Ok(Expr::Quote(var, Box::new(e)))
+    Ok(Expr::Quote(s, Box::new(e)))
 }
 
 fn parse_unquote(lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("unquote".to_string())(lexer)?;
-    let var = parse_variable(lexer)?;
+    let s = parse_stage(lexer)?;
     let e = parse_expr(lexer)?;
-    Ok(Expr::UnQuote(var, Box::new(e)))
+    Ok(Expr::UnQuote(s, Box::new(e)))
 }
 
 fn parse_app(lexer: &mut Lexer) -> Result<Expr, String> {

@@ -1,13 +1,15 @@
 use crate::expr::Expr;
 use crate::expr::Op;
 use crate::expr::Pattern;
+use crate::expr::Stage;
 use crate::expr::Variable;
 use std::collections::HashMap;
 
 pub fn is_value(expr: &Expr) -> bool {
     match expr {
-        Expr::Epsilon => true,
         Expr::Nil => true,
+        Expr::Stage(_) => true,
+        Expr::Variable(_) => true,
         Expr::Boolean(_) => true,
         Expr::Number(_) => true,
         Expr::Fun(_, _) => true,
@@ -70,13 +72,16 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                 } else {
                     match *e1 {
                         Expr::Fun(pat, e3) => match make_binding(&pat, &e2) {
-                            Ok(bs) => subst_expr(bs, *e3),
+                            Ok(bs) => subst_expr(bs, HashMap::new(), *e3),
                             Err(_) => unreachable!(),
                         },
-                        Expr::SFun(v, e3) => {
-                            let mut b = HashMap::new();
-                            b.insert(v, *e2);
-                            subst_expr(b, *e3)
+                        Expr::SFun(s1, e3) => match *e2 {
+                            Expr::Stage(s2) => {
+                                let mut b = HashMap::new();
+                                b.insert(s1, s2);
+                                subst_expr(HashMap::new(), b, *e3)
+                            }
+                            _ => unreachable!(),
                         },
                         _ => unreachable!(),
                     }
@@ -98,7 +103,7 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                     Expr::Let(pat, Box::new(eval_one_step(*e1)), e2)
                 } else {
                     match make_binding(&pat, &e1) {
-                        Ok(bs) => subst_expr(bs, *e2),
+                        Ok(bs) => subst_expr(bs, HashMap::new(), *e2),
                         Err(_) => unreachable!(),
                     }
                 }
@@ -139,75 +144,89 @@ pub fn eval_one_step(expr: Expr) -> Expr {
                     for m in ms {
                         let (p, e) = *m;
                         match make_binding(&p, &expr) {
-                            Ok(b) => return subst_expr(b, e),
+                            Ok(b) => return subst_expr(b, HashMap::new(), e),
                             Err(_) => (),
                         }
                     }
                     unreachable!()
                 }
             }
-            Expr::Epsilon
-            | Expr::Boolean(_)
+            Expr::Boolean(_)
             | Expr::Number(_)
             | Expr::Variable(_)
             | Expr::Fun(_, _)
             | Expr::SFun(_, _)
             | Expr::Quote(_, _)
+            | Expr::Stage(_)
             | Expr::Nil => unreachable!(),
         }
     }
 }
 
-fn subst_expr(bind: HashMap<Variable, Expr>, expr: Expr) -> Expr {
+fn subst_expr(
+    bind: HashMap<Variable, Expr>,
+    stage_bind: HashMap<Stage, Stage>,
+    expr: Expr,
+) -> Expr {
     match expr {
         Expr::Variable(v) => match bind.get(&v) {
             Some(e) => e.clone(),
             None => Expr::Variable(v),
         },
-        Expr::Epsilon | Expr::Boolean(_) | Expr::Number(_) | Expr::Nil => expr,
+        Expr::Stage(s) => match stage_bind.get(&s) {
+            Some(t) => Expr::Stage(t.clone()),
+            None => Expr::Stage(s),
+        },
+        Expr::Boolean(_) | Expr::Number(_) | Expr::Nil => expr,
         Expr::BinOp(o, e1, e2) => Expr::BinOp(
             o,
-            Box::new(subst_expr(bind.clone(), *e1)),
-            Box::new(subst_expr(bind, *e2)),
+            Box::new(subst_expr(bind.clone(), stage_bind.clone(), *e1)),
+            Box::new(subst_expr(bind, stage_bind, *e2)),
         ),
         Expr::If(c, e1, e2) => Expr::If(
-            Box::new(subst_expr(bind.clone(), *c)),
-            Box::new(subst_expr(bind.clone(), *e1)),
-            Box::new(subst_expr(bind, *e2)),
+            Box::new(subst_expr(bind.clone(), stage_bind.clone(), *c)),
+            Box::new(subst_expr(bind.clone(), stage_bind.clone(), *e1)),
+            Box::new(subst_expr(bind, stage_bind, *e2)),
         ),
         Expr::Fun(pat, e) => {
             let mut b = bind.clone();
             for v in get_variables(&pat) {
                 b.remove(&v);
             }
-            Expr::Fun(pat, Box::new(subst_expr(b, *e)))
+            Expr::Fun(pat, Box::new(subst_expr(b, stage_bind, *e)))
         }
-        Expr::SFun(v, e) => {
-            let mut b = bind.clone();
-            b.remove(&v);
-            Expr::SFun(v, Box::new(subst_expr(b, *e)))
+        Expr::SFun(s, e) => {
+            let mut sb = stage_bind.clone();
+            sb.remove(&s);
+            Expr::SFun(s, Box::new(subst_expr(bind, sb, *e)))
         }
         Expr::App(e1, e2) => Expr::App(
-            Box::new(subst_expr(bind.clone(), *e1)),
-            Box::new(subst_expr(bind, *e2)),
+            Box::new(subst_expr(bind.clone(), stage_bind.clone(), *e1)),
+            Box::new(subst_expr(bind, stage_bind, *e2)),
         ),
-        Expr::Quote(v, e) => match bind.get(&v) {
-            Some(Expr::Epsilon) => subst_expr(bind, *e),
-            Some(Expr::Variable(v2)) => Expr::Quote(v2.clone(), Box::new(subst_expr(bind, *e))),
-            _ => {
-                let mut b = bind.clone();
-                b.remove(&v);
-                Expr::Quote(v.clone(), Box::new(subst_expr(bind, *e)))
+        Expr::Quote(s, e) => match stage_bind.get(&s) {
+            Some(t) => {
+                if *t == Stage("".to_string()) {
+                    subst_expr(bind, stage_bind, *e)
+                } else if *t == s {
+                    Expr::Quote(s, e)
+                } else {
+                    Expr::Quote(s, Box::new(subst_expr(bind, stage_bind, *e)))
+                }
             }
+            _ => Expr::Quote(s, e),
         },
-        Expr::UnQuote(v, e) => match bind.get(&v) {
-            Some(Expr::Epsilon) => subst_expr(bind, *e),
-            Some(Expr::Variable(v2)) => Expr::UnQuote(v2.clone(), Box::new(subst_expr(bind, *e))),
-            _ => {
-                let mut b = bind.clone();
-                b.remove(&v);
-                Expr::UnQuote(v.clone(), Box::new(subst_expr(bind, *e)))
+        Expr::UnQuote(s, e) => match stage_bind.get(&s) {
+            Some(t) => {
+                if *t == Stage("".to_string()) {
+                    subst_expr(bind, stage_bind, *e)
+                } else if *t == s {
+                    Expr::UnQuote(s, e)
+                } else {
+                    Expr::Quote(s, Box::new(subst_expr(bind, stage_bind, *e)))
+                }
             }
+            _ => Expr::Quote(s, e),
         },
         Expr::Let(pat, e1, e2) => {
             let mut b = bind.clone();
@@ -216,17 +235,17 @@ fn subst_expr(bind: HashMap<Variable, Expr>, expr: Expr) -> Expr {
             }
             Expr::Let(
                 pat,
-                Box::new(subst_expr(b, *e1)),
-                Box::new(subst_expr(bind, *e2)),
+                Box::new(subst_expr(b, stage_bind.clone(), *e1)),
+                Box::new(subst_expr(bind, stage_bind, *e2)),
             )
         }
         Expr::Tuple(es) => Expr::Tuple(
             es.iter()
-                .map(|e| Box::new(subst_expr(bind.clone(), (**e).clone())))
+                .map(|e| Box::new(subst_expr(bind.clone(), stage_bind.clone(), (**e).clone())))
                 .collect(),
         ),
         Expr::Match(expr, ms) => {
-            let expr2 = subst_expr(bind.clone(), *expr);
+            let expr2 = subst_expr(bind.clone(), stage_bind.clone(), *expr);
             let mut ms2 = Vec::new();
             for m in ms {
                 let (p, e) = *m;
@@ -235,7 +254,7 @@ fn subst_expr(bind: HashMap<Variable, Expr>, expr: Expr) -> Expr {
                 for v in vs {
                     b.remove(&v);
                 }
-                ms2.push(Box::new((p, subst_expr(b, e))));
+                ms2.push(Box::new((p, subst_expr(b, stage_bind.clone(), e))));
             }
             Expr::Match(Box::new(expr2), ms2)
         }

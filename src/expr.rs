@@ -1,19 +1,32 @@
 use std::fmt;
 
 #[derive(Debug, Clone, Eq, Hash)]
-pub struct Variable {
-    pub name: Box<String>,
-}
+pub struct Variable(pub String);
 
 impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "{}", self.0)
     }
 }
 
 impl PartialEq for Variable {
     fn eq(&self, other: &Self) -> bool {
-        *self.name == *other.name
+        *self.0 == *other.0
+    }
+}
+
+#[derive(Debug, Clone, Eq, Hash)]
+pub struct Stage(pub String);
+
+impl fmt::Display for Stage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl PartialEq for Stage {
+    fn eq(&self, other: &Self) -> bool {
+        *self.0 == *other.0
     }
 }
 
@@ -119,7 +132,6 @@ impl PartialEq for Pattern {
 
 #[derive(Debug, Clone)]
 pub enum Type {
-    Stage,
     Bool,
     Int,
     Unit,
@@ -127,14 +139,13 @@ pub enum Type {
     Tuple(Vec<Box<Type>>),
     List(Box<Type>),
     Fun(Box<Type>, Box<Type>),
-    Code(Variable, Box<Type>)
+    Code(Stage, Box<Type>),
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Type::*;
         match self {
-            Stage => write!(f, "stage"),
             Bool => write!(f, "bool"),
             Int => write!(f, "int"),
             Unit => write!(f, "()"),
@@ -142,7 +153,7 @@ impl fmt::Display for Type {
             List(t) => write!(f, "{} list", t),
             Tuple(ts) => {
                 let mut s = String::new();
-                for (i,t) in ts.iter().enumerate() {
+                for (i, t) in ts.iter().enumerate() {
                     if i == 0 {
                         s = format!("{}", t);
                     } else {
@@ -152,26 +163,26 @@ impl fmt::Display for Type {
                 write!(f, "{}", s)
             }
             Type::Fun(t1, t2) => write!(f, "({} -> {})", t1, t2),
-            Type::Code(v, t) => write!(f, "(code {} {})", v, t)
+            Type::Code(v, t) => write!(f, "(code {} {})", v, t),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Epsilon,
     Nil,
     Boolean(bool),
     Number(i64),
     Variable(Variable),
+    Stage(Stage),
     BinOp(Op, Box<Expr>, Box<Expr>),
     Fun(Pattern, Box<Expr>),
-    SFun(Variable, Box<Expr>),
+    SFun(Stage, Box<Expr>),
     App(Box<Expr>, Box<Expr>),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
     Let(Pattern, Box<Expr>, Box<Expr>),
-    Quote(Variable, Box<Expr>),
-    UnQuote(Variable, Box<Expr>),
+    Quote(Stage, Box<Expr>),
+    UnQuote(Stage, Box<Expr>),
     Tuple(Vec<Box<Expr>>),
     Match(Box<Expr>, Vec<Box<(Pattern, Expr)>>),
 }
@@ -180,8 +191,8 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Expr::*;
         match self {
-            Epsilon => write!(f, "epsilon"),
-            Nil => write!(f, "[]"),
+            _Epsilon => write!(f, "epsilon"),
+            _Nil => write!(f, "[]"),
             Boolean(b) => {
                 if *b {
                     write!(f, "true")
@@ -231,7 +242,6 @@ impl PartialEq for Expr {
     fn eq(&self, other: &Self) -> bool {
         use Expr::*;
         match (self, other) {
-            (Epsilon, Epsilon) => true,
             (Boolean(b1), Boolean(b2)) if b1 == b2 => true,
             (Number(i1), Number(i2)) if i1 == i2 => true,
             (Variable(v1), Variable(v2)) if v1 == v2 => true,
@@ -248,4 +258,3 @@ impl PartialEq for Expr {
         }
     }
 }
-
