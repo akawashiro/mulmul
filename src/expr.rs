@@ -168,7 +168,7 @@ impl PartialEq for Pattern {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Hash)]
 pub enum Type {
     Bool,
     Int,
@@ -178,6 +178,34 @@ pub enum Type {
     List(Box<Type>),
     Fun(Box<Type>, Box<Type>),
     Code(Stage, Box<Type>),
+}
+
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        use Type::*;
+        match (self, other) {
+            (Bool, Bool) => true,
+            (Int, Int) => true,
+            (Unit, Unit) => true,
+            (TVar(v1), TVar(v2)) if v1 == v2 => true,
+            (Tuple(ts1), Tuple(ts2)) => {
+                if ts1.len() != ts2.len() {
+                    false
+                } else {
+                    for i in 0..ts1.len() {
+                        if ts1[i] != ts2[i] {
+                            return false;
+                        }
+                    }
+                    true
+                }
+            }
+            (List(t1), List(t2)) if t1 == t2 => true,
+            (Fun(t11, t12), Fun(t21, t22)) if t11 == t12 && t21 == t22 => true,
+            (Code(s1, t1), Code(s2, t2)) if s1 == s2 && t1 == t2 => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Type {

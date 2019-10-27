@@ -1,12 +1,19 @@
 use crate::expr::Expr;
 use crate::expr::Op;
 use crate::expr::Stage;
+use crate::expr::StageElement;
 use crate::expr::StageElement::StageVariable;
 use crate::expr::Type;
 use crate::expr::Variable;
 use std::collections::HashMap;
 
 pub fn get_type(expr: &Expr) -> Result<Type, String> {
+    let c = get_constraints_from_expr(expr);
+    println!("constraints = ");
+    show_constraints(&c);
+    let (ts, ss) = solve_constraints(c);
+    println!("solutions = ");
+    show_solutions(ts, ss);
     match expr {
         Expr::Number(_) => Ok(Type::Int),
         Expr::Boolean(_) => Ok(Type::Bool),
@@ -14,17 +21,43 @@ pub fn get_type(expr: &Expr) -> Result<Type, String> {
     }
 }
 
-pub fn gen_tvar(nt: &mut u32) -> Type {
+type Constraints = Vec<((Type, Stage), (Type, Stage))>;
+type TypeSolution = HashMap<Type, Type>;
+type StageSolution = HashMap<StageElement, Stage>;
+
+fn solve_constraints(constraints: Constraints) -> (TypeSolution, StageSolution) {
+    let mut tcstr = Vec::new();
+    let mut scstr = Vec::new();
+    let mut tsub = HashMap::new();
+    let mut ssub = HashMap::new();
+    for ((t1, s1), (t2, s2)) in constraints {
+        tcstr.push((t1, t2));
+        scstr.push((s1, s2));
+    }
+    while tcstr.len() > 0 {}
+    (tsub, ssub)
+}
+
+fn show_solutions(tsol: HashMap<Type, Type>, ssol: HashMap<StageElement, Stage>) {
+    for (t1, t2) in tsol {
+        println!("{} -> {}", t1, t2);
+    }
+    for (s1, s2) in ssol {
+        println!("{} -> {}", s1, s2);
+    }
+}
+
+fn gen_tvar(nt: &mut u32) -> Type {
     *nt += 1;
     Type::TVar(Variable(format!("a{}", nt)))
 }
 
-pub fn gen_svar(ns: &mut u32) -> Stage {
+fn gen_svar(ns: &mut u32) -> Stage {
     *ns += 1;
     Stage(vec![StageVariable(format!("s{}", ns))])
 }
 
-pub fn get_constraints_from_expr(expr: &Expr) -> Vec<((Type, Stage), (Type, Stage))> {
+fn get_constraints_from_expr(expr: &Expr) -> Vec<((Type, Stage), (Type, Stage))> {
     let t = Type::TVar(Variable("a0".to_string()));
     let s = Stage(Vec::new());
     let mut nt = 1;
@@ -35,14 +68,14 @@ pub fn get_constraints_from_expr(expr: &Expr) -> Vec<((Type, Stage), (Type, Stag
     res
 }
 
-pub fn show_constraints(subst: &Vec<((Type, Stage), (Type, Stage))>) {
+fn show_constraints(subst: &Vec<((Type, Stage), (Type, Stage))>) {
     for s in subst {
         let ((t1, s1), (t2, s2)) = s;
         println!("{}, {} = {}, {}", t1, s1, t2, s2);
     }
 }
 
-pub fn get_constraints(
+fn get_constraints(
     expr: &Expr,
     t: Type,
     s: Stage,
