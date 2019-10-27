@@ -1,7 +1,6 @@
 use crate::expr::Expr;
 use crate::expr::Op;
 use crate::expr::Stage;
-use crate::expr::StageElement;
 use crate::expr::StageElement::StageVariable;
 use crate::expr::Type;
 use crate::expr::Variable;
@@ -25,25 +24,25 @@ pub fn gen_svar(ns: &mut u32) -> Stage {
     Stage(vec![StageVariable(format!("s{}", ns))])
 }
 
-pub fn get_subst_from_expr(expr: &Expr) -> Vec<((Type, Stage), (Type, Stage))> {
+pub fn get_constraints_from_expr(expr: &Expr) -> Vec<((Type, Stage), (Type, Stage))> {
     let t = Type::TVar(Variable("a0".to_string()));
     let s = Stage(Vec::new());
     let mut nt = 1;
     let mut ns = 1;
     let mut res = Vec::new();
     let mut env = HashMap::new();
-    get_subst(expr, t, s, &mut nt, &mut ns, &mut res, &mut env);
+    get_constraints(expr, t, s, &mut nt, &mut ns, &mut res, &mut env);
     res
 }
 
-pub fn show_subst(subst: &Vec<((Type, Stage), (Type, Stage))>) {
+pub fn show_constraints(subst: &Vec<((Type, Stage), (Type, Stage))>) {
     for s in subst {
         let ((t1, s1), (t2, s2)) = s;
         println!("{}, {} = {}, {}", t1, s1, t2, s2);
     }
 }
 
-pub fn get_subst(
+pub fn get_constraints(
     expr: &Expr,
     t: Type,
     s: Stage,
@@ -68,31 +67,31 @@ pub fn get_subst(
             use Op::*;
             match o {
                 Plus | Minus | Times | Divides => {
-                    get_subst(e1, Type::Int, s.clone(), nt, ns, res, env);
-                    get_subst(e2, Type::Int, s.clone(), nt, ns, res, env);
+                    get_constraints(e1, Type::Int, s.clone(), nt, ns, res, env);
+                    get_constraints(e2, Type::Int, s.clone(), nt, ns, res, env);
                     res.push(((t, s.clone()), (Type::Int, s)))
                 }
                 Lt | Lte | Gt | Gte | Equal => {
-                    get_subst(e1, Type::Int, s.clone(), nt, ns, res, env);
-                    get_subst(e2, Type::Int, s.clone(), nt, ns, res, env);
+                    get_constraints(e1, Type::Int, s.clone(), nt, ns, res, env);
+                    get_constraints(e2, Type::Int, s.clone(), nt, ns, res, env);
                     res.push(((t, s.clone()), (Type::Bool, s)))
                 }
                 And | Or => {
-                    get_subst(e1, Type::Bool, s.clone(), nt, ns, res, env);
-                    get_subst(e2, Type::Bool, s.clone(), nt, ns, res, env);
+                    get_constraints(e1, Type::Bool, s.clone(), nt, ns, res, env);
+                    get_constraints(e2, Type::Bool, s.clone(), nt, ns, res, env);
                     res.push(((t, s.clone()), (Type::Bool, s)))
                 }
                 Cons => {
                     let t2 = Type::List(Box::new(gen_tvar(nt)));
-                    get_subst(e1, t2.clone(), s.clone(), nt, ns, res, env);
-                    get_subst(e2, t2, s, nt, ns, res, env);
+                    get_constraints(e1, t2.clone(), s.clone(), nt, ns, res, env);
+                    get_constraints(e2, t2, s, nt, ns, res, env);
                 }
             }
         }
         Expr::If(e1, e2, e3) => {
-            get_subst(e1, Type::Bool, s.clone(), nt, ns, res, env);
-            get_subst(e2, t.clone(), s.clone(), nt, ns, res, env);
-            get_subst(e3, t, s, nt, ns, res, env);
+            get_constraints(e1, Type::Bool, s.clone(), nt, ns, res, env);
+            get_constraints(e2, t.clone(), s.clone(), nt, ns, res, env);
+            get_constraints(e3, t, s, nt, ns, res, env);
         }
         Expr::Quote(sv, e) => {
             println!("{}", s);
@@ -105,7 +104,7 @@ pub fn get_subst(
                 (t, s.clone()),
                 (Type::Code(sv.clone(), Box::new(t2.clone())), s),
             ));
-            get_subst(e, t2, Stage(v), nt, ns, res, env)
+            get_constraints(e, t2, Stage(v), nt, ns, res, env)
         }
         Expr::UnQuote(sv, e) => {
             let t2 = gen_tvar(nt);
@@ -113,14 +112,14 @@ pub fn get_subst(
             let mut s3 = s2.0.clone();
             s3.append(&mut sv.0.clone());
             res.push(((t.clone(), s), (t2, Stage(s3))));
-            get_subst(e, Type::Code(sv.clone(), Box::new(t)), s2, nt, ns, res, env)
+            get_constraints(e, Type::Code(sv.clone(), Box::new(t)), s2, nt, ns, res, env)
         }
         Expr::Tuple(es) => {
             let mut ts = Vec::new();
             for e in es {
                 let t2 = gen_tvar(nt);
                 ts.push(Box::new(t2.clone()));
-                get_subst(e, t2, s.clone(), nt, ns, res, env);
+                get_constraints(e, t2, s.clone(), nt, ns, res, env);
             }
             res.push(((t, s.clone()), (Type::Tuple(ts), s)))
         }

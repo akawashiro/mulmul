@@ -8,9 +8,9 @@ use eval::eval_one_step;
 use eval::is_value;
 mod typing;
 use std::io::{self, Write};
-use typing::get_subst_from_expr;
+use typing::get_constraints_from_expr;
 use typing::get_type;
-use typing::show_subst;
+use typing::show_constraints;
 
 // fn test_with_input_string(vs: Vec<String>) {
 //     for s in vs {
@@ -46,12 +46,12 @@ fn repl() {
                 println!("{:?}", e);
                 let mut e2 = e;
                 let t = get_type(&e2);
-                let s = get_subst_from_expr(&e2);
+                let s = get_constraints_from_expr(&e2);
                 match t {
                     Ok(t) => {
                         println!("type = {}", t);
                         println!("substitution = ");
-                        show_subst(&s);
+                        show_constraints(&s);
                     }
                     Err(s) => {
                         println!("type error = {}", s);
