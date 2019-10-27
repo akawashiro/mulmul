@@ -15,18 +15,49 @@ impl PartialEq for Variable {
 }
 
 #[derive(Debug, Clone, Eq, Hash)]
-pub struct Stage(pub Vec<String>);
+pub enum StageElement {
+    StageConst(String),
+    StageVariable(String),
+}
+
+impl PartialEq for StageElement {
+    fn eq(&self, other: &Self) -> bool {
+        use StageElement::*;
+        match (self, other) {
+            (StageConst(s1), StageConst(s2)) if s1 == s2 => true,
+            (StageVariable(s1), StageVariable(s2)) if s1 == s2 => true,
+            _ => false,
+        }
+    }
+}
+
+impl fmt::Display for StageElement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use StageElement::*;
+        match self {
+            StageConst(s) => write!(f, "{}", s),
+            StageVariable(s) => write!(f, "'{}", s),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, Hash)]
+pub struct Stage(pub Vec<StageElement>);
 
 impl fmt::Display for Stage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.0.len() == 0 {
             write!(f, "epsilon")
-        }else{
-        let mut o = String::from("");
-        for s in self.0.clone() {
-            o = format!("{}{}", o, s);
-        }
-        write!(f, "{}", o)
+        } else {
+            let mut o = String::from("");
+            for s in self.0.clone() {
+                if o == String::from("") {
+                    o = format!("{}", s);
+                } else {
+                    o = format!("{}, {}", o, s);
+                }
+            }
+            write!(f, "{}", o)
         }
     }
 }

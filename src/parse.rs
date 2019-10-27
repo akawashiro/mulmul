@@ -2,6 +2,8 @@ use crate::expr::Expr;
 use crate::expr::Op;
 use crate::expr::Pattern;
 use crate::expr::Stage;
+use crate::expr::StageElement;
+use crate::expr::StageElement::StageConst;
 use crate::expr::Variable;
 use crate::lexer::Lexer;
 
@@ -247,11 +249,11 @@ fn parse_stage(lexer: &mut Lexer) -> Result<Stage, String> {
         Err("parse_stage failed".to_string())
     } else {
         lexer.getone();
-        let mut v = Vec::new();
-        if t != "epsilon" {
-            v.push(t);
+        if t == "epsilon" {
+            Ok(Stage(Vec::new()))
+        } else {
+            Ok(Stage(vec![StageConst(t)]))
         }
-        Ok(Stage(v))
     }
 }
 

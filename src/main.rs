@@ -10,6 +10,7 @@ mod typing;
 use std::io::{self, Write};
 use typing::get_subst_from_expr;
 use typing::get_type;
+use typing::show_subst;
 
 // fn test_with_input_string(vs: Vec<String>) {
 //     for s in vs {
@@ -42,13 +43,15 @@ fn repl() {
         match r {
             Ok(e) => {
                 println!("{}", e);
+                println!("{:?}", e);
                 let mut e2 = e;
                 let t = get_type(&e2);
                 let s = get_subst_from_expr(&e2);
                 match t {
                     Ok(t) => {
                         println!("type = {}", t);
-                        println!("substitution = {:?}", s)
+                        println!("substitution = ");
+                        show_subst(&s);
                     }
                     Err(s) => {
                         println!("type error = {}", s);

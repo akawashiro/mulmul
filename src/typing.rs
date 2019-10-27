@@ -1,6 +1,8 @@
 use crate::expr::Expr;
 use crate::expr::Op;
 use crate::expr::Stage;
+use crate::expr::StageElement;
+use crate::expr::StageElement::StageVariable;
 use crate::expr::Type;
 use crate::expr::Variable;
 use std::collections::HashMap;
@@ -18,9 +20,9 @@ pub fn gen_tvar(nt: &mut u32) -> Type {
     Type::TVar(Variable(format!("a{}", nt)))
 }
 
-pub fn gen_stage(ns: &mut u32) -> Stage {
+pub fn gen_svar(ns: &mut u32) -> Stage {
     *ns += 1;
-    Stage(vec!(format!("s{}", ns)))
+    Stage(vec![StageVariable(format!("s{}", ns))])
 }
 
 pub fn get_subst_from_expr(expr: &Expr) -> Vec<((Type, Stage), (Type, Stage))> {
@@ -32,6 +34,13 @@ pub fn get_subst_from_expr(expr: &Expr) -> Vec<((Type, Stage), (Type, Stage))> {
     let mut env = HashMap::new();
     get_subst(expr, t, s, &mut nt, &mut ns, &mut res, &mut env);
     res
+}
+
+pub fn show_subst(subst: &Vec<((Type, Stage), (Type, Stage))>) {
+    for s in subst {
+        let ((t1, s1), (t2, s2)) = s;
+        println!("{}, {} = {}, {}", t1, s1, t2, s2);
+    }
 }
 
 pub fn get_subst(
@@ -86,17 +95,23 @@ pub fn get_subst(
             get_subst(e3, t, s, nt, ns, res, env);
         }
         Expr::Quote(sv, e) => {
+            println!("{}", s);
             let t2 = gen_tvar(nt);
             let mut v = s.0.clone();
             v.append(&mut sv.0.clone());
-            res.push(((t, s.clone()), (Type::Code(sv.clone(), Box::new(t2.clone())), s)));
+            println!("{:?}", sv);
+            println!("{:?}", v);
+            res.push((
+                (t, s.clone()),
+                (Type::Code(sv.clone(), Box::new(t2.clone())), s),
+            ));
             get_subst(e, t2, Stage(v), nt, ns, res, env)
         }
         Expr::UnQuote(sv, e) => {
             let t2 = gen_tvar(nt);
-            let s2 = gen_stage(ns);
+            let s2 = gen_svar(ns);
             let mut s3 = s2.0.clone();
-            s3.append(&mut s2.0.clone());
+            s3.append(&mut sv.0.clone());
             res.push(((t.clone(), s), (t2, Stage(s3))));
             get_subst(e, Type::Code(sv.clone(), Box::new(t)), s2, nt, ns, res, env)
         }
