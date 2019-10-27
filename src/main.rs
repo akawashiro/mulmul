@@ -41,23 +41,25 @@ fn repl() {
         let r = parse_expr(&mut lexer);
         match r {
             Ok(e) => {
+                println!("{}", e);
                 let mut e2 = e;
                 let t = get_type(&e2);
                 let s = get_subst_from_expr(&e2);
                 match t {
                     Ok(t) => {
-                        println!("{}", t);
-                        println!("{:?}", s)
+                        println!("type = {}", t);
+                        println!("substitution = {:?}", s)
                     }
                     Err(s) => {
-                        println!("{}", s);
+                        println!("type error = {}", s);
                         continue;
                     }
                 }
+                println!("reduction sequence =");
                 println!("{}", e2);
                 while !is_value(&e2) {
                     e2 = eval_one_step(e2);
-                    println!("{}", e2);
+                    println!("==> {}", e2);
                 }
             }
             Err(e) => println!("{:?}", e),

@@ -206,7 +206,7 @@ fn subst_expr(
         ),
         Expr::Quote(s, e) => match stage_bind.get(&s) {
             Some(t) => {
-                if *t == Stage("".to_string()) {
+                if *t == Stage(Vec::new()) {
                     subst_expr(bind, stage_bind, *e)
                 } else if *t == s {
                     Expr::Quote(s, e)
@@ -218,7 +218,7 @@ fn subst_expr(
         },
         Expr::UnQuote(s, e) => match stage_bind.get(&s) {
             Some(t) => {
-                if *t == Stage("".to_string()) {
+                if *t == Stage(Vec::new()) {
                     subst_expr(bind, stage_bind, *e)
                 } else if *t == s {
                     Expr::UnQuote(s, e)

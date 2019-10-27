@@ -60,7 +60,7 @@ pub struct Lexer {
 impl Lexer {
     pub fn new(input: String) -> Lexer {
         let tok = tokenize(input);
-        println!("{:?}", tok);
+        println!("tokens = {:?}", tok);
         Lexer {
             tokens: tok,
             position: 0,

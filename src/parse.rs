@@ -247,7 +247,11 @@ fn parse_stage(lexer: &mut Lexer) -> Result<Stage, String> {
         Err("parse_stage failed".to_string())
     } else {
         lexer.getone();
-        Ok(Stage(t))
+        let mut v = Vec::new();
+        if t != "epsilon" {
+            v.push(t);
+        }
+        Ok(Stage(v))
     }
 }
 
@@ -361,7 +365,7 @@ fn parse_nil(lexer: &mut Lexer) -> Result<Expr, String> {
 
 fn parse_epsilon(lexer: &mut Lexer) -> Result<Expr, String> {
     parse_string("epsilon".to_string())(lexer)?;
-    Ok(Expr::Stage(Stage("".to_string())))
+    Ok(Expr::Stage(Stage(Vec::new())))
 }
 
 fn parse_match(lexer: &mut Lexer) -> Result<Expr, String> {

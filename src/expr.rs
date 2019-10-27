@@ -1,5 +1,4 @@
 use std::fmt;
-
 #[derive(Debug, Clone, Eq, Hash)]
 pub struct Variable(pub String);
 
@@ -16,11 +15,19 @@ impl PartialEq for Variable {
 }
 
 #[derive(Debug, Clone, Eq, Hash)]
-pub struct Stage(pub String);
+pub struct Stage(pub Vec<String>);
 
 impl fmt::Display for Stage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        if self.0.len() == 0 {
+            write!(f, "epsilon")
+        }else{
+        let mut o = String::from("");
+        for s in self.0.clone() {
+            o = format!("{}{}", o, s);
+        }
+        write!(f, "{}", o)
+        }
     }
 }
 
@@ -191,8 +198,7 @@ impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Expr::*;
         match self {
-            _Epsilon => write!(f, "epsilon"),
-            _Nil => write!(f, "[]"),
+            Nil => write!(f, "[]"),
             Boolean(b) => {
                 if *b {
                     write!(f, "true")
@@ -202,6 +208,7 @@ impl fmt::Display for Expr {
             }
             Number(i) => write!(f, "{}", i),
             Variable(v) => write!(f, "{}", v),
+            Stage(s) => write!(f, "{}", s),
             BinOp(o, e1, e2) => write!(f, "({} {} {})", e1, o, e2),
             Fun(p, e) => write!(f, "(fun {} -> {})", p, e),
             SFun(v, e) => write!(f, "(sfun {} -> {})", v, e),
