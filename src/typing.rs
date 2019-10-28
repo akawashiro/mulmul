@@ -45,6 +45,9 @@ fn solve_constraints(constraints: Constraints) -> Result<(TypeSolution, StageSol
         match tcstr.pop_back() {
             Some((t1, t2)) => {
                 use Type::*;
+                if t1 == t2 {
+                    continue;
+                }
                 match (t1, t2) {
                     (TVar(v), t22) => {
                         let _ = tsub.insert(Type::TVar(v), t22);
