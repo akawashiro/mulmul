@@ -6,14 +6,21 @@ use crate::expr::StageElement::StageVariable;
 use crate::expr::Type;
 use crate::expr::Variable;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 
 pub fn get_type(expr: &Expr) -> Result<Type, String> {
     let c = get_constraints_from_expr(expr);
     println!("constraints = ");
     show_constraints(&c);
-    let (ts, ss) = solve_constraints(c);
-    println!("solutions = ");
-    show_solutions(ts, ss);
+    match solve_constraints(c) {
+        Ok((ts, ss)) => {
+            println!("solutions = ");
+            show_solutions(ts, ss);
+        }
+        Err(s) => {
+            println!("{}", s);
+        }
+    }
     match expr {
         Expr::Number(_) => Ok(Type::Int),
         Expr::Boolean(_) => Ok(Type::Bool),
@@ -25,17 +32,49 @@ type Constraints = Vec<((Type, Stage), (Type, Stage))>;
 type TypeSolution = HashMap<Type, Type>;
 type StageSolution = HashMap<StageElement, Stage>;
 
-fn solve_constraints(constraints: Constraints) -> (TypeSolution, StageSolution) {
-    let mut tcstr = Vec::new();
-    let mut scstr = Vec::new();
-    let mut tsub = HashMap::new();
-    let mut ssub = HashMap::new();
+fn solve_constraints(constraints: Constraints) -> Result<(TypeSolution, StageSolution), String> {
+    let mut tcstr = VecDeque::new();
+    let mut scstr = VecDeque::new();
+    let mut tsub = TypeSolution::new();
+    let mut ssub = StageSolution::new();
     for ((t1, s1), (t2, s2)) in constraints {
-        tcstr.push((t1, t2));
-        scstr.push((s1, s2));
+        tcstr.push_back((t1, t2));
+        scstr.push_back((s1, s2));
     }
-    while tcstr.len() > 0 {}
-    (tsub, ssub)
+    loop {
+        match tcstr.pop_back() {
+            Some((t1, t2)) => {
+                use Type::*;
+                match (t1, t2) {
+                    (TVar(v), t22) => {
+                        let _ = tsub.insert(Type::TVar(v), t22);
+                        ()
+                    }
+                    (Fun(t11, t12), Fun(t21, t22)) => {
+                        tcstr.push_back((*t11, *t21));
+                        tcstr.push_back((*t12, *t22))
+                    }
+                    (List(t11), List(t21)) => tcstr.push_back((*t11, *t21)),
+                    (Code(s1, t11), Code(s2, t21)) => {
+                        scstr.push_back((s1, s2));
+                        tcstr.push_back((*t11, *t21))
+                    }
+                    (Tuple(ts1), Tuple(ts2)) => {
+                        if ts1.len() == ts2.len() {
+                            for i in 0..ts1.len() {
+                                tcstr.push_back((*ts1[i].clone(), *ts2[i].clone()))
+                            }
+                        } else {
+                            return Err("Lenths of two tuples are not same.".to_string());
+                        }
+                    }
+                    _ => (),
+                };
+            }
+            None => break,
+        }
+    }
+    Ok((tsub, ssub))
 }
 
 fn show_solutions(tsol: HashMap<Type, Type>, ssol: HashMap<StageElement, Stage>) {
