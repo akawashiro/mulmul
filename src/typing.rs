@@ -1,3 +1,4 @@
+use crate::expr::Pattern;
 use crate::expr::Expr;
 use crate::expr::Op;
 use crate::expr::Stage;
@@ -114,6 +115,27 @@ fn show_constraints(subst: &Vec<((Type, Stage), (Type, Stage))>) {
     for s in subst {
         let ((t1, s1), (t2, s2)) = s;
         println!("{}, {} = {}, {}", t1, s1, t2, s2);
+    }
+}
+
+fn get_type_of_pattern(pat: &Pattern, nt: &mut u32) -> (Type, Vec<(Variable, Type)>) {
+    use Pattern::*;
+    match pat {
+        Variable(v) => {
+            let t = gen_tvar(nt);
+            (t.clone(), vec!((v.clone(),t)))
+        }
+        Tuple(ps) => {
+            let mut ts = Vec::new();
+            let mut env = Vec::new();
+            for p in ps {
+               let (t,mut e) = get_type_of_pattern(p, nt);
+               ts.push(Box::new(t));
+               env.append(&mut e);
+            }
+            (Type::Tuple(ts), env)
+        }
+        _ => unreachable!()
     }
 }
 
