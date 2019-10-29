@@ -178,6 +178,7 @@ pub enum Type {
     List(Box<Type>),
     Fun(Box<Type>, Box<Type>),
     Code(Stage, Box<Type>),
+    SFun(Stage, Box<Type>),
 }
 
 impl PartialEq for Type {
@@ -203,6 +204,7 @@ impl PartialEq for Type {
             (List(t1), List(t2)) if t1 == t2 => true,
             (Fun(t11, t12), Fun(t21, t22)) if t11 == t12 && t21 == t22 => true,
             (Code(s1, t1), Code(s2, t2)) if s1 == s2 && t1 == t2 => true,
+            (SFun(s1, t1), SFun(s2, t2)) if s1 == s2 && t1 == t2 => true,
             _ => false,
         }
     }
@@ -228,8 +230,9 @@ impl fmt::Display for Type {
                 }
                 write!(f, "{}", s)
             }
-            Type::Fun(t1, t2) => write!(f, "({} -> {})", t1, t2),
-            Type::Code(v, t) => write!(f, "(code {} {})", v, t),
+            Fun(t1, t2) => write!(f, "({} -> {})", t1, t2),
+            Code(v, t) => write!(f, "(code {} {})", v, t),
+            SFun(s, t) => write!(f, "(sfun {} {})", s, t),
         }
     }
 }

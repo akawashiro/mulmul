@@ -60,7 +60,7 @@ Separators are
 - `+`, `*`, `-`, `/`, `<`, `>`, `<=`, `>=`, `==`
 - `(*`, `*)`
 - `(`, `)`, `,`
-- `::`, `::`
+- `::`
 
 ## Parser
 
@@ -71,6 +71,7 @@ expr ::= "if" expr "then" expr "else" expr
        | list_expr
        | "quote" variable expr
        | "unquote" variable expr
+       | "sfun" variable expr
        | "match" expr "with" inside_match
 
 inside_match ::= pattern "->" expr

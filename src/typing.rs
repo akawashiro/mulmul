@@ -169,12 +169,9 @@ fn get_constraints(
             get_constraints(e3, t, s, nt, ns, res, env);
         }
         Expr::Quote(sv, e) => {
-            println!("{}", s);
             let t2 = gen_tvar(nt);
             let mut v = s.0.clone();
             v.append(&mut sv.0.clone());
-            println!("{:?}", sv);
-            println!("{:?}", v);
             res.push((
                 (t, s.clone()),
                 (Type::Code(sv.clone(), Box::new(t2.clone())), s),
@@ -197,6 +194,35 @@ fn get_constraints(
                 get_constraints(e, t2, s.clone(), nt, ns, res, env);
             }
             res.push(((t, s.clone()), (Type::Tuple(ts), s)))
+        }
+        // In the original paper, sv must not appears anywhere else in the program. But
+        // in this implementation, `sfun` makes scope. So the restriction is meeted
+        // automatically.
+        Expr::SFun(sv, e) => {
+            let t2 = gen_tvar(nt);
+            res.push((
+                (t, s.clone()),
+                (Type::SFun(sv.clone(), Box::new(t2.clone())), s.clone()),
+            ));
+            get_constraints(e, t2, s, nt, ns, res, env)
+        }
+        Expr::App(e1, e2) => {
+            if **e2 == Expr::Stage(Stage(Vec::new())) {
+                let s2 = gen_svar(ns);
+                get_constraints(e1, Type::SFun(s2, Box::new(t)), s, nt, ns, res, env)
+            } else {
+                let t2 = gen_tvar(nt);
+                get_constraints(
+                    e1,
+                    Type::Fun(Box::new(t2.clone()), Box::new(t)),
+                    s.clone(),
+                    nt,
+                    ns,
+                    res,
+                    env,
+                );
+                get_constraints(e2, t2, s, nt, ns, res, env);
+            }
         }
         _ => (),
     }
